@@ -26,23 +26,47 @@ def setup_logger(level=logging.DEBUG):
     return logger
 
 
-def train(net, dataloader, criterion, optimizer, all_prototype):
+def train(net, dataloader, criterion, optimizer, all_prototypes):
     logger = logging.getLogger(__name__)
 
     for i, (feature, label) in enumerate(dataloader):
         feature, label = feature.to(net.device), label.to(net.device)
 
-        optimizer.zero_grad()
-
+        # extract abstract feature through CNN.
         feature = net(feature)
 
         assign_prototype(feature, label)
 
-        loss = criterion(feature, label, all_prototype)
+        optimizer.zero_grad()
+
+        loss = criterion(feature, label, all_prototypes)
 
 
-def assign_prototype(feature, label):
-    pass
+def assign_prototype(feature, label, all_prototypes):
+    distance = nn.PairwiseDistance(p=2)
+    if label not in all_prototypes:
+        all_prototypes[label] = []
+        prototype = functions.Prototype(label)
+        prototype.update(feature)
+        all_prototypes[label].append(prototype)
+    else:
+        minimum_distance = all_prototypes['threshold']
+        closest_prototype = None
+        has_prototype = False
+
+        for p in all_prototypes[label]:
+            d = distance(feature, p.feature)
+            if d < minimum_distance:
+                closest_prototype = p
+                minimum_distance = d
+                has_prototype = True
+
+        if has_prototype:
+            closest_prototype.update(feature)
+        else:
+            prototype = functions.Prototype(label)
+            prototype.update(feature)
+            all_prototypes[label].append(prototype)
 
 
 if __name__ == '__main__':
@@ -60,7 +84,7 @@ if __name__ == '__main__':
     TESTSET = nets.CPLDataset(DATASET)
     TESTLOADER = DataLoader(dataset=TESTSET, batch_size=1, shuffle=False, num_workers=2)
 
-    PROTOTYPES = {}
+    PROTOTYPES = {'threshold': 1.0}
 
     net = nets.CPLNet(device=DEVICE)
     dce = functions.DCE(gamma=1.0)
