@@ -6,6 +6,7 @@ from torch.utils.data import Dataset
 
 DATASET_PATH = 'data/fashion-mnist_train.csv'
 PKL_PATH = "pkl/fashion-mnist.pkl"
+THRESHOLD = 1.0
 
 
 class CPLDataset(Dataset):
@@ -45,6 +46,7 @@ class CPLNet(nn.Module):
 
         self.cnn_output_dim = 20 * 7 * 7
 
+        self.device = device
         self.to(device)
 
     def forward(self, x):
