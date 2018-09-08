@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-distance = nn.PairwiseDistance(p=2)
+compute_distance = nn.PairwiseDistance(p=2)
 
 
 def assign_prototype(feature, label, all_prototypes, threshold):
@@ -33,7 +33,7 @@ def find_closest_prototype(feature, all_prototypes, label=None):
         # find closest prototype from all prototypes
         for c in all_prototypes:
             for p in all_prototypes[c]:
-                d = distance(feature, p.feature)
+                d = compute_distance(feature, p.feature)
 
                 if minimum_distance is None:
                     closest_prototype = p
@@ -44,7 +44,7 @@ def find_closest_prototype(feature, all_prototypes, label=None):
     else:
         # find closest prototype from prototypes in corresponding class
         for p in all_prototypes[label]:
-            d = distance(feature, p.feature)
+            d = compute_distance(feature, p.feature)
 
             if minimum_distance is None:
                 closest_prototype = p
@@ -61,13 +61,13 @@ def compute_probability(feature, label, all_prototypes, gamma=1.0):
 
     for c in all_prototypes:
         for p in all_prototypes[c]:
-            d = distance(feature, p.feature)
+            d = compute_distance(feature, p.feature)
             one += torch.tensor(-gamma * d ** 2).exp()
 
     probability = 0.0
 
     for p in all_prototypes[label]:
-        d = distance(feature, p.feature)
+        d = compute_distance(feature, p.feature)
         probability += torch.tensor(-gamma * d ** 2).exp()
 
     probability /= one
@@ -92,7 +92,7 @@ class PLoss(nn.Module):
         super(PLoss, self).__init__()
 
     def forward(self, feature, closest_prototype):
-        d = distance(feature, closest_prototype.feature)
+        d = compute_distance(feature, closest_prototype.feature)
 
         return d ** 2
 

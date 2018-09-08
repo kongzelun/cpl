@@ -6,7 +6,7 @@ from torch.utils.data import Dataset
 
 DATASET_PATH = 'data/fashion-mnist_train.csv'
 PKL_PATH = "pkl/fashion-mnist.pkl"
-THRESHOLD = 10.0
+THRESHOLD = 3.0
 
 
 class CPLDataset(Dataset):
@@ -31,20 +31,18 @@ class CPLNet(nn.Module):
 
         self.conv1 = nn.Sequential(
             # [batch_size, 1, 28, 28]
-            nn.Conv2d(in_channels=1, out_channels=50, kernel_size=5, padding=2),
+            nn.Conv2d(in_channels=1, out_channels=50, kernel_size=7, padding=3),
             nn.ReLU(),
-            # [batch_size, 10, 28, 28]
+            # [batch_size, 50, 28, 28]
             nn.MaxPool2d(2, 2)
         )
         self.conv2 = nn.Sequential(
-            # [batch_size, 10, 14, 14]
-            nn.Conv2d(in_channels=50, out_channels=250, kernel_size=5, padding=2),
+            # [batch_size, 50, 14, 14]
+            nn.Conv2d(in_channels=50, out_channels=100, kernel_size=5, padding=2),
             nn.ReLU(),
-            # [batch_size, 20, 14, 14]
+            # [batch_size, 100, 14, 14]
             nn.MaxPool2d(2, 2)
         )
-
-        self.cnn_output_dim = 20 * 7 * 7
 
         self.device = device
         self.to(device)
