@@ -56,7 +56,7 @@ def find_closest_prototype(feature, all_prototypes, label=None):
     return closest_prototype, minimum_distance
 
 
-def compute_probability(feature, label, all_prototypes, gamma=1.0):
+def compute_probability(feature, label, all_prototypes, gamma):
     one = 0.0
 
     for c in all_prototypes:
@@ -78,7 +78,6 @@ def compute_probability(feature, label, all_prototypes, gamma=1.0):
 class DCELoss(nn.Module):
     def __init__(self, gamma=1.0):
         super(DCELoss, self).__init__()
-
         self.gamma = gamma
 
     def forward(self, feature, label, all_prototypes):
@@ -98,6 +97,8 @@ class PLoss(nn.Module):
 
 
 class GCPLLoss(nn.Module):
+    gamma = 1.0
+
     def __init__(self, gamma=1.0, lambda_=0.1):
         super(GCPLLoss, self).__init__()
 

@@ -1,12 +1,11 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch import tensor
 from torch.utils.data import Dataset
 
 DATASET_PATH = 'data/fashion-mnist_train.csv'
 PKL_PATH = "pkl/fashion-mnist.pkl"
-THRESHOLD = 3.0
+THRESHOLD = 2.0
 
 
 class CPLDataset(Dataset):

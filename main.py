@@ -48,7 +48,7 @@ def train(net, dataloader, criterion, optimizer, all_prototypes):
         logger.debug("%5d: Loss: %.4f, Distance: %.4f", i + 1, loss, distance)
 
 
-def test(net, dataloader, all_prototypes, gamma=1.0):
+def test(net, dataloader, all_prototypes, gamma):
     logger = logging.getLogger(__name__)
 
     correct = 0
@@ -59,15 +59,27 @@ def test(net, dataloader, all_prototypes, gamma=1.0):
         # extract abstract feature through CNN.
         feature = net(feature).view(1, -1)
 
-        closest_prototype, probability = functions.find_closest_prototype(feature, all_prototypes)
-        probability = functions.compute_probability(feature, closest_prototype.label, all_prototypes, gamma=gamma)
+        predicted_label, probability = predict(feature, all_prototypes, gamma)
 
-        logger.debug("%5d: Label: %d, Prediction: %d, Probability: %.4f", i + 1, label, closest_prototype.label, probability)
-
-        if label == closest_prototype.label:
+        if label == predicted_label:
             correct += 1
 
+        logger.debug("%5d: Label: %d, Prediction: %d, Probability: %.4f, Accuracy: %.4f",
+                     i + 1, label, predicted_label, probability, correct / (i + 1))
+
     return correct / len(dataloader)
+
+
+def predict(feature, all_prototypes, gamma):
+    probabilities = {}
+
+    for label in all_prototypes:
+        probability = functions.compute_probability(feature, label, all_prototypes, gamma)
+        probabilities[label] = probability
+
+    predicted_label = max(probabilities, key=probabilities.get)
+
+    return predicted_label, probabilities[predicted_label]
 
 
 if __name__ == '__main__':
@@ -91,23 +103,23 @@ if __name__ == '__main__':
     gcpl = functions.GCPLLoss(gamma=1.0, lambda_=0.1)
     sgd = optim.SGD(cplnet.parameters(), lr=0.001, momentum=0.9)
 
-    # if not os.path.exists("pkl"):
-    #     os.mkdir("pkl")
-    #
-    # if os.path.exists(nets.PKL_PATH):
-    #     state_dict = torch.load(nets.PKL_PATH)
-    #     try:
-    #         cplnet.load_state_dict(state_dict)
-    #         LOGGER.info("Load state from file %s.", nets.PKL_PATH)
-    #     except RuntimeError:
-    #         LOGGER.error("Loading state from file %s failed.", nets.PKL_PATH)
+    if not os.path.exists("pkl"):
+        os.mkdir("pkl")
+
+    if os.path.exists(nets.PKL_PATH):
+        state_dict = torch.load(nets.PKL_PATH)
+        try:
+            cplnet.load_state_dict(state_dict)
+            LOGGER.info("Load state from file %s.", nets.PKL_PATH)
+        except RuntimeError:
+            LOGGER.error("Loading state from file %s failed.", nets.PKL_PATH)
 
     for epoch in range(TRAIN_EPOCH_NUMBER):
         LOGGER.info("Trainset size: %d, Epoch number: %d", len(TRAINSET), epoch + 1)
         train(cplnet, TRAINLOADER, gcpl, sgd, PROTOTYPES)
-        # torch.save(cplnet.state_dict(), nets.PKL_PATH)
+        torch.save(cplnet.state_dict(), nets.PKL_PATH)
 
-        accuracy = test(cplnet, TESTLOADER, PROTOTYPES)
+        accuracy = test(cplnet, TESTLOADER, PROTOTYPES, gcpl.gamma)
 
         prototype_count = 0
 
@@ -116,4 +128,4 @@ if __name__ == '__main__':
                 prototype_count += 1
 
         LOGGER.info("Accuracy: %.4f", accuracy)
-        LOGGER.info("Prototype Count: %d", accuracy)
+        LOGGER.info("Prototype Count: %d", prototype_count)
