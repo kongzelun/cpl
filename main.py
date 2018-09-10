@@ -39,7 +39,7 @@ def train(net, dataloader, criterion, optimizer, all_prototypes):
 
         closest_prototype_index, min_distance = functions.assign_prototype(tensor(feature.data), label, all_prototypes, tensor(nets.THRESHOLD).to(net.device))
 
-        loss = criterion(feature, label, all_prototypes, closest_prototype_index)
+        loss = criterion(feature, label, all_prototypes, all_prototypes[label][closest_prototype_index])
         loss.backward()
         optimizer.step()
 
