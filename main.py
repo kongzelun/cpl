@@ -117,15 +117,16 @@ if __name__ == '__main__':
     for epoch in range(TRAIN_EPOCH_NUMBER):
         LOGGER.info("Trainset size: %d, Epoch number: %d", len(TRAINSET), epoch + 1)
         train(cplnet, TRAINLOADER, gcpl, sgd, PROTOTYPES)
-        torch.save(cplnet.state_dict(), nets.PKL_PATH)
-
-        accuracy = test(cplnet, TESTLOADER, PROTOTYPES, gcpl.gamma)
 
         prototype_count = 0
 
         for c in PROTOTYPES:
-            for p in PROTOTYPES[c]:
-                prototype_count += 1
+            prototype_count += len(PROTOTYPES[c])
+
+        LOGGER.info("Prototype Count: %d", prototype_count)
+
+        torch.save(cplnet.state_dict(), nets.PKL_PATH)
+
+        accuracy = test(cplnet, TESTLOADER, PROTOTYPES, gcpl.gamma)
 
         LOGGER.info("Accuracy: %.4f", accuracy)
-        LOGGER.info("Prototype Count: %d", prototype_count)

@@ -5,7 +5,7 @@ from torch.utils.data import Dataset
 
 DATASET_PATH = 'data/fashion-mnist_train.csv'
 PKL_PATH = "pkl/fashion-mnist.pkl"
-THRESHOLD = 2.0
+THRESHOLD = 3.0
 
 
 class CPLDataset(Dataset):

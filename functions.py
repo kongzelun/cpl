@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 
 compute_distance = nn.PairwiseDistance(p=2)
+compute_multi_distance = nn.PairwiseDistance(p=2, keepdim=True)
 
 
 def assign_prototype(feature, label, all_prototypes, threshold):
@@ -118,4 +119,6 @@ class Prototype:
 
     def update(self, feature):
         self.samples.append(feature)
-        self.feature = sum(self.samples) / len(self.samples)
+
+        # self.feature = sum(self.samples) / len(self.samples)
+        self.feature = torch.sum(torch.cat(self.samples), dim=0) / len(self.samples)
