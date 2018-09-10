@@ -5,56 +5,86 @@ compute_distance = nn.PairwiseDistance(p=2)
 compute_multi_distance = nn.PairwiseDistance(p=2, keepdim=True)
 
 
+# def assign_prototype(feature, label, all_prototypes, threshold):
+#     if label not in all_prototypes:
+#         all_prototypes[label] = []
+#         prototype = Prototype(label)
+#         prototype.update(feature)
+#         all_prototypes[label].append(prototype)
+#         closest_prototype = prototype
+#     else:
+#         closest_prototype, minimum_distance = find_closest_prototype(feature, all_prototypes, label)
+#
+#         if minimum_distance < threshold:
+#             closest_prototype.update(feature)
+#         else:
+#             prototype = Prototype(label)
+#             prototype.update(feature)
+#             all_prototypes[label].append(prototype)
+#             closest_prototype = prototype
+#
+#     return closest_prototype
+
+
 def assign_prototype(feature, label, all_prototypes, threshold):
+    closest_prototype_index = 0
+    min_distance = 0.0
+
     if label not in all_prototypes:
-        all_prototypes[label] = []
-        prototype = Prototype(label)
-        prototype.update(feature)
-        all_prototypes[label].append(prototype)
-        closest_prototype = prototype
+        all_prototypes[label] = Prototypes(label)
+        all_prototypes[label].prototypes.append(feature)
+        all_prototypes[label].sample_counts.append(1)
     else:
-        closest_prototype, minimum_distance = find_closest_prototype(feature, all_prototypes, label)
-
-        if minimum_distance < threshold:
-            closest_prototype.update(feature)
+        closest_prototype_index, min_distance = find_closest_prototype(feature, all_prototypes, label)
+        if min_distance < threshold:
+            all_prototypes[label].update(closest_prototype_index, feature)
         else:
-            prototype = Prototype(label)
-            prototype.update(feature)
-            all_prototypes[label].append(prototype)
-            closest_prototype = prototype
+            all_prototypes[label].prototypes.append(feature)
+            all_prototypes[label].sample_counts.append(1)
 
-    return closest_prototype
+    return closest_prototype_index, min_distance
 
+
+# def find_closest_prototype(feature, all_prototypes, label=None):
+#     minimum_distance = None
+#     closest_prototype = None
+#
+#     if label is None:
+#         # find closest prototype from all prototypes
+#         for c in all_prototypes:
+#             for p in all_prototypes[c]:
+#                 d = compute_distance(feature, p.feature)
+#
+#                 if minimum_distance is None:
+#                     closest_prototype = p
+#                     minimum_distance = d
+#                 elif d < minimum_distance:
+#                     closest_prototype = p
+#                     minimum_distance = d
+#     else:
+#         # find closest prototype from prototypes in corresponding class
+#         for p in all_prototypes[label]:
+#             d = compute_distance(feature, p.feature)
+#
+#             if minimum_distance is None:
+#                 closest_prototype = p
+#                 minimum_distance = d
+#             elif d < minimum_distance:
+#                 closest_prototype = p
+#                 minimum_distance = d
+#
+#     return closest_prototype, minimum_distance
 
 def find_closest_prototype(feature, all_prototypes, label=None):
-    minimum_distance = None
-    closest_prototype = None
+    closest_prototype_index = 0
+    min_distance = 0.0
 
     if label is None:
         # find closest prototype from all prototypes
-        for c in all_prototypes:
-            for p in all_prototypes[c]:
-                d = compute_distance(feature, p.feature)
+        for label in all_prototypes:
+            prototypes = torch.cat(all_prototypes[label])
 
-                if minimum_distance is None:
-                    closest_prototype = p
-                    minimum_distance = d
-                elif d < minimum_distance:
-                    closest_prototype = p
-                    minimum_distance = d
-    else:
-        # find closest prototype from prototypes in corresponding class
-        for p in all_prototypes[label]:
-            d = compute_distance(feature, p.feature)
-
-            if minimum_distance is None:
-                closest_prototype = p
-                minimum_distance = d
-            elif d < minimum_distance:
-                closest_prototype = p
-                minimum_distance = d
-
-    return closest_prototype, minimum_distance
+    return closest_prototype_index, min_distance
 
 
 def compute_probability(feature, label, all_prototypes, gamma):
@@ -111,14 +141,26 @@ class GCPLLoss(nn.Module):
         return self.dce(feature, label, all_prototypes) + self.lambda_ * self.pl(feature, closest_prototype)
 
 
-class Prototype:
+# class Prototype:
+#     def __init__(self, label):
+#         self.label = label
+#         self.feature = None
+#         self.sample_count = 0
+#
+#     def update(self, feature):
+#         if self.feature is None:
+#             self.feature = feature
+#         else:
+#             self.feature = (self.feature * self.sample_count + feature) / (self.sample_count + 1)
+#
+#         self.sample_count += 1
+
+class Prototypes:
     def __init__(self, label):
         self.label = label
-        self.feature = None
-        self.samples = []
+        self.sample_counts = []
+        self.prototypes = []
 
-    def update(self, feature):
-        self.samples.append(feature)
-
-        # self.feature = sum(self.samples) / len(self.samples)
-        self.feature = torch.sum(torch.cat(self.samples), dim=0) / len(self.samples)
+    def update(self, index, feature):
+        self.prototypes[index] = (self.prototypes[index] * self.sample_counts[index] + feature) / (self.sample_counts + 1)
+        self.sample_counts += 1

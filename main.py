@@ -37,15 +37,15 @@ def train(net, dataloader, criterion, optimizer, all_prototypes):
         # extract abstract feature through CNN.
         feature = net(feature).view(1, -1)
 
-        closest_prototype = functions.assign_prototype(tensor(feature.data), label, all_prototypes, tensor(nets.THRESHOLD).to(net.device))
+        closest_prototype_index, min_distance = functions.assign_prototype(tensor(feature.data), label, all_prototypes, tensor(nets.THRESHOLD).to(net.device))
 
-        loss = criterion(feature, label, all_prototypes, closest_prototype)
+        loss = criterion(feature, label, all_prototypes, closest_prototype_index)
         loss.backward()
         optimizer.step()
 
-        distance = functions.compute_distance(feature, closest_prototype.feature)
+        # min_distance = functions.compute_distance(feature, closest_prototype.feature)
 
-        logger.debug("%5d: Loss: %.4f, Distance: %.4f", i + 1, loss, distance)
+        logger.debug("%5d: Loss: %.4f, Distance: %.4f", i + 1, loss, min_distance)
 
 
 def test(net, dataloader, all_prototypes, gamma):
