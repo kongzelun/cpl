@@ -43,8 +43,6 @@ def train(net, dataloader, criterion, optimizer, all_prototypes):
         loss.backward()
         optimizer.step()
 
-        # min_distance = functions.compute_distance(feature, closest_prototype.feature)
-
         logger.debug("%5d: Loss: %.4f, Distance: %.4f", i + 1, loss, min_distance)
 
 
@@ -91,10 +89,10 @@ if __name__ == '__main__':
 
     DATASET = np.loadtxt(nets.DATASET_PATH, delimiter=',')
 
-    TRAINSET = nets.CPLDataset(DATASET[:10000])
+    TRAINSET = nets.CPLDataset(DATASET[:5000])
     TRAINLOADER = DataLoader(dataset=TRAINSET, batch_size=1, shuffle=True, num_workers=4)
 
-    TESTSET = nets.CPLDataset(DATASET[10000:20000])
+    TESTSET = nets.CPLDataset(DATASET[5000:10000])
     TESTLOADER = DataLoader(dataset=TESTSET, batch_size=1, shuffle=False, num_workers=0)
 
     PROTOTYPES = {}
