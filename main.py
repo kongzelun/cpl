@@ -9,25 +9,26 @@ import fashion_minst as nets
 import functions
 
 
-def setup_logger(level=logging.DEBUG):
-    """
-    Setup logger.
-    -------------
-    :param level:
-    :return: logger
-    """
+def setup_logger(level=logging.DEBUG, filename=None):
     logger = logging.getLogger(__name__)
     logger.setLevel(level)
     handler = logging.StreamHandler()
+    handler.setLevel(logging.DEBUG)
     formatter = logging.Formatter('%(asctime)s %(levelname)s: %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
+
+    if filename is not None:
+        file_handler = logging.FileHandler(filename=filename)
+        file_handler.setLevel(logging.INFO)
+        logger.addHandler(file_handler)
 
     return logger
 
 
 def train(net, dataloader, criterion, optimizer, all_prototypes):
     logger = logging.getLogger(__name__)
+    loss_sum = 0.0
 
     for i, (feature, label) in enumerate(dataloader):
         feature, label = feature.to(net.device), int(label)
@@ -43,7 +44,11 @@ def train(net, dataloader, criterion, optimizer, all_prototypes):
         loss.backward()
         optimizer.step()
 
+        loss_sum += loss
+
         logger.debug("%5d: Loss: %.4f, Distance: %.4f", i + 1, loss, min_distance)
+
+    logger.info("Loss Average: %.4f", loss_sum / len(dataloader))
 
 
 def test(net, dataloader, all_prototypes, gamma):
@@ -81,9 +86,9 @@ def predict(feature, all_prototypes, gamma):
 
 
 if __name__ == '__main__':
-    LOGGER = setup_logger(level=logging.DEBUG)
+    LOGGER = setup_logger(level=logging.DEBUG, filename='log.txt')
 
-    TRAIN_EPOCH_NUMBER = 1
+    TRAIN_EPOCH_NUMBER = 10
 
     DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -114,6 +119,9 @@ if __name__ == '__main__':
 
     for epoch in range(TRAIN_EPOCH_NUMBER):
         LOGGER.info("Trainset size: %d, Epoch number: %d", len(TRAINSET), epoch + 1)
+
+        PROTOTYPES.clear()
+
         train(cplnet, TRAINLOADER, gcpl, sgd, PROTOTYPES)
 
         prototype_count = 0
