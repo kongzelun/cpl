@@ -50,3 +50,25 @@ class CPLNet(nn.Module):
         x = self.conv1(x)
         x = self.conv2(x)
         return x
+
+
+class BasicBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, droprate=0.0):
+        super(BasicBlock, self).__init__()
+        self.bn1 = nn.BatchNorm2d(in_channels)
+        self.relu = nn.ReLU(inplace=True)
+        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False)
+        self.dropout = nn.Dropout(p=droprate, inplace=True)
+
+    def forward(self, x):
+        out = self.dropout(self.conv1(self.relu(self.bn1(x))))
+
+        return
+
+
+class DenseNet(nn.Module):
+    def __init__(self, device):
+        super(DenseNet, self).__init__()
+
+    def forward(self, x):
+        pass
