@@ -5,7 +5,7 @@ import torch
 from torch import tensor
 import torch.optim as optim
 from torch.utils.data import DataLoader
-import fashion_minst as nets
+import fashion_minst as net
 import functions
 
 
@@ -38,7 +38,7 @@ def train(net, dataloader, criterion, optimizer, all_prototypes):
         # extract abstract feature through CNN.
         feature = net(feature).view(1, -1)
 
-        closest_prototype_index, min_distance = functions.assign_prototype(tensor(feature.data), label, all_prototypes, tensor(nets.THRESHOLD).to(net.device))
+        closest_prototype_index, min_distance = functions.assign_prototype(tensor(feature.data), label, all_prototypes, tensor(net.Config).to(net.device))
 
         loss = criterion(feature, label, all_prototypes, all_prototypes[label][closest_prototype_index])
         loss.backward()
@@ -92,37 +92,37 @@ if __name__ == '__main__':
 
     DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    DATASET = np.loadtxt(nets.DATASET_PATH, delimiter=',')
+    DATASET = np.loadtxt(net.Config.dataset_path, delimiter=',')
 
-    TRAINSET = nets.CPLDataset(DATASET[:5000])
+    TRAINSET = net.FashionMnist(DATASET[:5000])
     TRAINLOADER = DataLoader(dataset=TRAINSET, batch_size=1, shuffle=True, num_workers=4)
 
-    TESTSET = nets.CPLDataset(DATASET[5000:10000])
+    TESTSET = net.FashionMnist(DATASET[5000:10000])
     TESTLOADER = DataLoader(dataset=TESTSET, batch_size=1, shuffle=False, num_workers=0)
 
     PROTOTYPES = {}
 
-    cplnet = nets.CPLNet(device=DEVICE)
+    model = net.CNNNet(device=DEVICE)
     gcpl = functions.GCPLLoss(gamma=1.0, lambda_=0.1)
-    sgd = optim.SGD(cplnet.parameters(), lr=0.001, momentum=0.9)
+    sgd = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
     if not os.path.exists("pkl"):
         os.mkdir("pkl")
 
-    if os.path.exists(nets.PKL_PATH):
-        state_dict = torch.load(nets.PKL_PATH)
+    if os.path.exists(net.Config.pkl_path):
+        state_dict = torch.load(net.Config.pkl_path)
         try:
-            cplnet.load_state_dict(state_dict)
-            LOGGER.info("Load state from file %s.", nets.PKL_PATH)
+            model.load_state_dict(state_dict)
+            LOGGER.info("Load state from file %s.", net.Config.pkl_path)
         except RuntimeError:
-            LOGGER.error("Loading state from file %s failed.", nets.PKL_PATH)
+            LOGGER.error("Loading state from file %s failed.", net.Config.pkl_path)
 
     for epoch in range(TRAIN_EPOCH_NUMBER):
         LOGGER.info("Trainset size: %d, Epoch number: %d", len(TRAINSET), epoch + 1)
 
         PROTOTYPES.clear()
 
-        train(cplnet, TRAINLOADER, gcpl, sgd, PROTOTYPES)
+        train(model, TRAINLOADER, gcpl, sgd, PROTOTYPES)
 
         prototype_count = 0
 
@@ -131,8 +131,8 @@ if __name__ == '__main__':
 
         LOGGER.info("Prototype Count: %d", prototype_count)
 
-        torch.save(cplnet.state_dict(), nets.PKL_PATH)
+        torch.save(model.state_dict(), net.Config.pkl_path)
 
-        accuracy = test(cplnet, TESTLOADER, PROTOTYPES, gcpl.gamma)
+        accuracy = test(model, TESTLOADER, PROTOTYPES, gcpl.gamma)
 
         LOGGER.info("Accuracy: %.4f", accuracy)

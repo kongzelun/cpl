@@ -2,13 +2,16 @@ import torch
 import torch.nn as nn
 from torch import tensor
 from torch.utils.data import Dataset
-
-DATASET_PATH = 'data/fashion-mnist_train.csv'
-PKL_PATH = "pkl/fashion-mnist.pkl"
-THRESHOLD = 1.5
+import dense_net
 
 
-class CPLDataset(Dataset):
+class Config:
+    dataset_path = 'data/fashion-mnist_train.csv'
+    pkl_path = "pkl/fashion-mnist.pkl"
+    threshold = 1.5
+
+
+class FashionMnist(Dataset):
     def __init__(self, dataset):
         self.data = []
 
@@ -24,9 +27,9 @@ class CPLDataset(Dataset):
         return len(self.data)
 
 
-class CPLNet(nn.Module):
+class CNNNet(nn.Module):
     def __init__(self, device):
-        super(CPLNet, self).__init__()
+        super(CNNNet, self).__init__()
 
         self.conv1 = nn.Sequential(
             # [batch_size, 1, 28, 28]
@@ -52,61 +55,11 @@ class CPLNet(nn.Module):
         return x
 
 
-class BasicBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, droprate=0.0):
-        super(BasicBlock, self).__init__()
-        self.bn1 = nn.BatchNorm2d(in_channels)
-        self.relu = nn.ReLU(inplace=True)
-        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False)
-        self.dropout = nn.Dropout(p=droprate, inplace=False)
-
-    def forward(self, x):
-        out = self.dropout(self.conv1(self.relu(self.bn1(x))))
-        return torch.cat([x, out], dim=1)
-
-
-class BottleneckBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, droprate=0.0):
-        super(BottleneckBlock, self).__init__()
-        self.bn1 = nn.BatchNorm2d(in_channels)
-        self.relu = nn.ReLU(inplace=True)
-        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=False)
-
-        self.bn1 = nn.BatchNorm2d(in_channels)
-        self.conv2 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False)
-
-        self.dropout = nn.Dropout(p=droprate, inplace=False)
-
-    def forward(self, x):
-        x = self.dropout(self.conv1(self.relu(self.bn1(x))))
-        out = self.dropout(self.conv2(self.relu(self.bn2(x))))
-        return torch.cat([x, out], dim=1)
-
-
-class TransitionBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, droprate=0.0):
-        super(TransitionBlock, self).__init__()
-        self.bn1 = nn.BatchNorm2d(in_channels)
-        self.relu = nn.ReLU(inplace=True)
-        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=False)
-        self.dropout = nn.Dropout(p=droprate, inplace=False)
-        self.pooling = nn.AvgPool2d(kernel_size=2)
-
-    def forward(self, x):
-        out = self.pooling(self.dropout(self.conv1(self.relu(self.bn1(x)))))
-        return out
-
-
-class DenseBlock(nn.Module):
-    def __init__(self):
-        super(DenseBlock, self).__init__()
-
-    def forward(self, x):
-        pass
-
 class DenseNet(nn.Module):
-    def __init__(self, device):
+    def __init__(self, device, depth, learning_rate, growth_rate, reduction, bottleneck=True, drop_rate=0.0):
         super(DenseNet, self).__init__()
+
+        in_channels =
 
     def forward(self, x):
         pass
