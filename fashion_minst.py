@@ -58,13 +58,51 @@ class BasicBlock(nn.Module):
         self.bn1 = nn.BatchNorm2d(in_channels)
         self.relu = nn.ReLU(inplace=True)
         self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False)
-        self.dropout = nn.Dropout(p=droprate, inplace=True)
+        self.dropout = nn.Dropout(p=droprate, inplace=False)
 
     def forward(self, x):
         out = self.dropout(self.conv1(self.relu(self.bn1(x))))
+        return torch.cat([x, out], dim=1)
 
-        return
 
+class BottleneckBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, droprate=0.0):
+        super(BottleneckBlock, self).__init__()
+        self.bn1 = nn.BatchNorm2d(in_channels)
+        self.relu = nn.ReLU(inplace=True)
+        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=False)
+
+        self.bn1 = nn.BatchNorm2d(in_channels)
+        self.conv2 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False)
+
+        self.dropout = nn.Dropout(p=droprate, inplace=False)
+
+    def forward(self, x):
+        x = self.dropout(self.conv1(self.relu(self.bn1(x))))
+        out = self.dropout(self.conv2(self.relu(self.bn2(x))))
+        return torch.cat([x, out], dim=1)
+
+
+class TransitionBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, droprate=0.0):
+        super(TransitionBlock, self).__init__()
+        self.bn1 = nn.BatchNorm2d(in_channels)
+        self.relu = nn.ReLU(inplace=True)
+        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=False)
+        self.dropout = nn.Dropout(p=droprate, inplace=False)
+        self.pooling = nn.AvgPool2d(kernel_size=2)
+
+    def forward(self, x):
+        out = self.pooling(self.dropout(self.conv1(self.relu(self.bn1(x)))))
+        return out
+
+
+class DenseBlock(nn.Module):
+    def __init__(self):
+        super(DenseBlock, self).__init__()
+
+    def forward(self, x):
+        pass
 
 class DenseNet(nn.Module):
     def __init__(self, device):
