@@ -3,103 +3,137 @@ import logging
 import numpy as np
 import torch
 from torch import tensor
-import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-import fashion_minst as nets
+import fashion_minst as net
 import functions
 
 
-def setup_logger(level=logging.DEBUG):
-    """
-    Setup logger.
-    -------------
-    :param level:
-    :return: logger
-    """
+def setup_logger(level=logging.DEBUG, filename=None):
     logger = logging.getLogger(__name__)
     logger.setLevel(level)
     handler = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s %(levelname)s: %(message) s')
+    handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s %(levelname)s: %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
+
+    if filename is not None:
+        file_handler = logging.FileHandler(filename=filename)
+        file_handler.setLevel(logging.INFO)
+        logger.addHandler(file_handler)
 
     return logger
 
 
 def train(net, dataloader, criterion, optimizer, all_prototypes):
+    logger = logging.getLogger(__name__)
+    loss_sum = 0.0
+
     for i, (feature, label) in enumerate(dataloader):
         feature, label = feature.to(net.device), int(label)
 
         optimizer.zero_grad()
 
         # extract abstract feature through CNN.
-        feature = net(feature)
+        feature = net(feature).view(1, -1)
 
-        feature = feature.view(1, -1)
+        closest_prototype_index, min_distance = functions.assign_prototype(tensor(feature.data), label, all_prototypes, tensor(net.Config).to(net.device))
 
-        assign_prototype(tensor(feature.data), label, all_prototypes, nets.THRESHOLD)
+        loss = criterion(feature, label, all_prototypes, all_prototypes[label][closest_prototype_index])
+        loss.backward()
+        optimizer.step()
 
-        loss = criterion(feature, label, all_prototypes)
+        loss_sum += loss
+
+        logger.debug("%5d: Loss: %.4f, Distance: %.4f", i + 1, loss, min_distance)
+
+    logger.info("Loss Average: %.4f", loss_sum / len(dataloader))
 
 
-def assign_prototype(feature, label, all_prototypes, threshold):
-    distance = nn.PairwiseDistance(p=2)
-    if label not in all_prototypes:
-        all_prototypes[label] = []
-        prototype = functions.Prototype(label)
-        prototype.update(feature)
-        all_prototypes[label].append(prototype)
-    else:
-        minimum_distance = threshold
-        closest_prototype = None
-        has_prototype = False
+def test(net, dataloader, all_prototypes, gamma):
+    logger = logging.getLogger(__name__)
 
-        for p in all_prototypes[label]:
-            d = distance(feature, p.feature)
-            if d < minimum_distance:
-                closest_prototype = p
-                minimum_distance = d
-                has_prototype = True
+    correct = 0
 
-        if has_prototype:
-            closest_prototype.update(feature)
-        else:
-            prototype = functions.Prototype(label)
-            prototype.update(feature)
-            all_prototypes[label].append(prototype)
+    for i, (feature, label) in enumerate(dataloader):
+        feature, label = feature.to(net.device), int(label)
+
+        # extract abstract feature through CNN.
+        feature = net(feature).view(1, -1)
+
+        predicted_label, probability = predict(feature, all_prototypes, gamma)
+
+        if label == predicted_label:
+            correct += 1
+
+        logger.debug("%5d: Label: %d, Prediction: %d, Probability: %.4f, Accuracy: %.4f",
+                     i + 1, label, predicted_label, probability, correct / (i + 1))
+
+    return correct / len(dataloader)
+
+
+def predict(feature, all_prototypes, gamma):
+    probabilities = {}
+
+    for label in all_prototypes:
+        probability = functions.compute_probability(feature, label, all_prototypes, gamma)
+        probabilities[label] = probability
+
+    predicted_label = max(probabilities, key=probabilities.get)
+
+    return predicted_label, probabilities[predicted_label]
 
 
 if __name__ == '__main__':
-    LOGGER = setup_logger(level=logging.DEBUG)
+    LOGGER = setup_logger(level=logging.DEBUG, filename='log.txt')
 
-    TRAIN_EPOCH_NUMBER = 100
+    TRAIN_EPOCH_NUMBER = 10
 
     DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    DATASET = np.loadtxt(nets.DATASET_PATH, delimiter=',')
+    DATASET = np.loadtxt(net.Config.dataset_path, delimiter=',')
 
-    TRAINSET = nets.CPLDataset(DATASET)
-    TRAINLOADER = DataLoader(dataset=TRAINSET, batch_size=1, shuffle=True, num_workers=2)
+    TRAINSET = net.FashionMnist(DATASET[:5000])
+    TRAINLOADER = DataLoader(dataset=TRAINSET, batch_size=1, shuffle=True, num_workers=4)
 
-    TESTSET = nets.CPLDataset(DATASET)
-    TESTLOADER = DataLoader(dataset=TESTSET, batch_size=1, shuffle=False, num_workers=2)
+    TESTSET = net.FashionMnist(DATASET[5000:10000])
+    TESTLOADER = DataLoader(dataset=TESTSET, batch_size=1, shuffle=False, num_workers=0)
 
     PROTOTYPES = {}
 
-    cplnet = nets.CPLNet(device=DEVICE)
-    dce = functions.DCE(gamma=1.0)
-    sgd = optim.SGD(cplnet.parameters(), lr=0.001, momentum=0.9)
+    # model = net.CNNNet(device=DEVICE)
+    model = net.DenseNet(device=DEVICE, number_layers=6, growth_rate=12)
+    gcpl = functions.GCPLLoss(gamma=1.0, lambda_=0.1)
+    sgd = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
-    if os.path.exists(nets.PKL_PATH):
-        state_dict = torch.load(nets.PKL_PATH)
+    if not os.path.exists("pkl"):
+        os.mkdir("pkl")
+
+    if os.path.exists(net.Config.pkl_path):
+        state_dict = torch.load(net.Config.pkl_path)
         try:
-            cplnet.load_state_dict(state_dict)
-            LOGGER.info("Load state from file %s.", nets.PKL_PATH)
+            model.load_state_dict(state_dict)
+            LOGGER.info("Load state from file %s.", net.Config.pkl_path)
         except RuntimeError:
-            LOGGER.error("Loading state from file %s failed.", nets.PKL_PATH)
+            LOGGER.error("Loading state from file %s failed.", net.Config.pkl_path)
 
     for epoch in range(TRAIN_EPOCH_NUMBER):
         LOGGER.info("Trainset size: %d, Epoch number: %d", len(TRAINSET), epoch + 1)
-        train(cplnet, TRAINLOADER, dce, sgd, PROTOTYPES)
-        # torch.save(cplnet.state_dict(), nets.PKL_PATH)
+
+        PROTOTYPES.clear()
+
+        train(model, TRAINLOADER, gcpl, sgd, PROTOTYPES)
+
+        prototype_count = 0
+
+        for c in PROTOTYPES:
+            prototype_count += len(PROTOTYPES[c])
+
+        LOGGER.info("Prototype Count: %d", prototype_count)
+
+        torch.save(model.state_dict(), net.Config.pkl_path)
+
+        accuracy = test(model, TESTLOADER, PROTOTYPES, gcpl.gamma)
+
+        LOGGER.info("Accuracy: %.4f", accuracy)
