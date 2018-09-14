@@ -22,17 +22,17 @@ class BottleneckBlock(nn.Module):
         inter_channels = out_channels * 4
 
         self.bn1 = nn.BatchNorm2d(in_channels)
-        self.relu = nn.ReLU(inplace=True)
         self.conv1 = nn.Conv2d(in_channels, inter_channels, kernel_size=1, stride=1, padding=0, bias=False)
 
-        self.bn2 = nn.BatchNorm2d(in_channels)
+        self.bn2 = nn.BatchNorm2d(inter_channels)
         self.conv2 = nn.Conv2d(inter_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False)
 
+        self.relu = nn.ReLU(inplace=True)
         self.dropout = nn.Dropout(p=drop_rate, inplace=False)
 
     def forward(self, x):
-        x = self.dropout(self.conv1(self.relu(self.bn1(x))))
-        out = self.dropout(self.conv2(self.relu(self.bn2(x))))
+        out = self.dropout(self.conv1(self.relu(self.bn1(x))))
+        out = self.dropout(self.conv2(self.relu(self.bn2(out))))
         return torch.cat([x, out], dim=1)
 
 
@@ -46,8 +46,7 @@ class TransitionBlock(nn.Module):
         self.pooling = nn.AvgPool2d(kernel_size=2)
 
     def forward(self, x):
-        out = self.pooling(self.dropout(self.conv1(self.relu(self.bn1(x)))))
-        return out
+        return self.pooling(self.dropout(self.conv1(self.relu(self.bn1(x)))))
 
 
 class DenseBlock(nn.Module):

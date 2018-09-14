@@ -5,8 +5,10 @@ import torch
 from torch import tensor
 import torch.optim as optim
 from torch.utils.data import DataLoader
-import fashion_minst as net
+import fashion_minst as model
 import functions
+
+PROTOTYPES = {}
 
 
 def setup_logger(level=logging.DEBUG, filename=None):
@@ -38,7 +40,7 @@ def train(net, dataloader, criterion, optimizer, all_prototypes):
         # extract abstract feature through CNN.
         feature = net(feature).view(1, -1)
 
-        closest_prototype_index, min_distance = functions.assign_prototype(tensor(feature.data), label, all_prototypes, tensor(net.Config).to(net.device))
+        closest_prototype_index, min_distance = functions.assign_prototype(tensor(feature.data), label, all_prototypes, tensor(model.Config.threshold).to(net.device))
 
         loss = criterion(feature, label, all_prototypes, all_prototypes[label][closest_prototype_index])
         loss.backward()
@@ -85,55 +87,57 @@ def predict(feature, all_prototypes, gamma):
     return predicted_label, probabilities[predicted_label]
 
 
-if __name__ == '__main__':
-    LOGGER = setup_logger(level=logging.DEBUG, filename='log.txt')
+def main():
+    logger = setup_logger(level=logging.DEBUG, filename='log.txt')
 
-    TRAIN_EPOCH_NUMBER = 10
+    train_epoch_number = 10
 
-    DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    DATASET = np.loadtxt(net.Config.dataset_path, delimiter=',')
+    dataset = np.loadtxt(model.Config.dataset_path, delimiter=',')
 
-    TRAINSET = net.FashionMnist(DATASET[:5000])
-    TRAINLOADER = DataLoader(dataset=TRAINSET, batch_size=1, shuffle=True, num_workers=4)
+    trainset = model.FashionMnist(dataset[:5000])
+    trainloader = DataLoader(dataset=trainset, batch_size=1, shuffle=True, num_workers=4)
 
-    TESTSET = net.FashionMnist(DATASET[5000:10000])
-    TESTLOADER = DataLoader(dataset=TESTSET, batch_size=1, shuffle=False, num_workers=0)
-
-    PROTOTYPES = {}
+    testset = model.FashionMnist(dataset[5000:10000])
+    testloader = DataLoader(dataset=testset, batch_size=1, shuffle=False, num_workers=0)
 
     # model = net.CNNNet(device=DEVICE)
-    model = net.DenseNet(device=DEVICE, number_layers=6, growth_rate=12)
+    net = model.DenseNet(device=device, number_layers=6, growth_rate=12)
     gcpl = functions.GCPLLoss(gamma=1.0, lambda_=0.1)
-    sgd = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+    sgd = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
     if not os.path.exists("pkl"):
         os.mkdir("pkl")
 
-    if os.path.exists(net.Config.pkl_path):
-        state_dict = torch.load(net.Config.pkl_path)
+    if os.path.exists(model.Config.pkl_path):
+        state_dict = torch.load(model.Config.pkl_path)
         try:
-            model.load_state_dict(state_dict)
-            LOGGER.info("Load state from file %s.", net.Config.pkl_path)
+            net.load_state_dict(state_dict)
+            logger.info("Load state from file %s.", model.Config.pkl_path)
         except RuntimeError:
-            LOGGER.error("Loading state from file %s failed.", net.Config.pkl_path)
+            logger.error("Loading state from file %s failed.", model.Config.pkl_path)
 
-    for epoch in range(TRAIN_EPOCH_NUMBER):
-        LOGGER.info("Trainset size: %d, Epoch number: %d", len(TRAINSET), epoch + 1)
+    for epoch in range(train_epoch_number):
+        logger.info("Trainset size: %d, Epoch number: %d", len(trainset), epoch + 1)
 
         PROTOTYPES.clear()
 
-        train(model, TRAINLOADER, gcpl, sgd, PROTOTYPES)
+        train(net, trainloader, gcpl, sgd, PROTOTYPES)
 
         prototype_count = 0
 
         for c in PROTOTYPES:
             prototype_count += len(PROTOTYPES[c])
 
-        LOGGER.info("Prototype Count: %d", prototype_count)
+        logger.info("Prototype Count: %d", prototype_count)
 
-        torch.save(model.state_dict(), net.Config.pkl_path)
+        torch.save(net.state_dict(), model.Config.pkl_path)
 
-        accuracy = test(model, TESTLOADER, PROTOTYPES, gcpl.gamma)
+        accuracy = test(net, testloader, PROTOTYPES, gcpl.gamma)
 
-        LOGGER.info("Accuracy: %.4f", accuracy)
+        logger.info("Accuracy: %.4f", accuracy)
+
+
+if __name__ == '__main__':
+    main()
