@@ -102,7 +102,8 @@ if __name__ == '__main__':
 
     PROTOTYPES = {}
 
-    model = net.CNNNet(device=DEVICE)
+    # model = net.CNNNet(device=DEVICE)
+    model = net.DenseNet(device=DEVICE, number_layers=6, growth_rate=12)
     gcpl = functions.GCPLLoss(gamma=1.0, lambda_=0.1)
     sgd = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 

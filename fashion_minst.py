@@ -56,10 +56,50 @@ class CNNNet(nn.Module):
 
 
 class DenseNet(nn.Module):
-    def __init__(self, device, depth, learning_rate, growth_rate, reduction, bottleneck=True, drop_rate=0.0):
+    def __init__(self, device, number_layers, growth_rate, reduction=1.0, bottleneck=True, drop_rate=0.0):
         super(DenseNet, self).__init__()
 
-        in_channels =
+        channels = 2 * growth_rate
+
+        if bottleneck:
+            block = dense_net.BottleneckBlock
+        else:
+            block = dense_net.BasicBlock
+
+        # 1st conv before any dense block
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=channels, kernel_size=3, stride=1, padding=1, bias=False)
+
+        # 1st block
+        self.block1 = dense_net.DenseBlock(number_layers, channels, block, growth_rate, drop_rate)
+        channels = channels + number_layers * growth_rate
+        self.trans1 = dense_net.TransitionBlock(channels, int(channels * reduction), drop_rate)
+        channels = int(channels * reduction)
+
+        # 2nd block
+        self.block2 = dense_net.DenseBlock(number_layers, channels, block, growth_rate, drop_rate)
+        channels = channels + number_layers * growth_rate
+        self.trans2 = dense_net.TransitionBlock(channels, int(channels * reduction), drop_rate)
+        channels = int(channels * reduction)
+
+        # 3rd block
+        self.block2 = dense_net.DenseBlock(number_layers, channels, block, growth_rate, drop_rate)
+        channels = channels + number_layers * growth_rate
+
+        # global average pooling and classifier
+        self.bn1 = nn.BatchNorm2d(channels)
+        self.relu = nn.ReLU(inplace=True)
+        self.pooling = nn.AvgPool2d(kernel_size=8)
+
+        self.channels = channels
+
+        self.device = device
+        self.to(device)
 
     def forward(self, x):
-        pass
+        x = self.conv1(x)
+        x = self.trans1(self.block1(x))
+        x = self.trans2(self.block2(x))
+        x = self.block3(x)
+        x = self.relu(self.bn1(x))
+        out = self.pooling(x)
+        return out

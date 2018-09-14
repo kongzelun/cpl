@@ -18,12 +18,15 @@ class BasicBlock(nn.Module):
 class BottleneckBlock(nn.Module):
     def __init__(self, in_channels, out_channels, drop_rate=0.0):
         super(BottleneckBlock, self).__init__()
-        self.bn1 = nn.BatchNorm2d(in_channels)
-        self.relu = nn.ReLU(inplace=True)
-        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=False)
+
+        inter_channels = out_channels * 4
 
         self.bn1 = nn.BatchNorm2d(in_channels)
-        self.conv2 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False)
+        self.relu = nn.ReLU(inplace=True)
+        self.conv1 = nn.Conv2d(in_channels, inter_channels, kernel_size=1, stride=1, padding=0, bias=False)
+
+        self.bn2 = nn.BatchNorm2d(in_channels)
+        self.conv2 = nn.Conv2d(inter_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False)
 
         self.dropout = nn.Dropout(p=drop_rate, inplace=False)
 
