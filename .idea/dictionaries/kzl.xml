@@ -1,14 +1,8 @@
 <component name="ProjectDictionaryState">
   <dictionary name="kzl">
     <words>
-      <w>cplnet</w>
-      <w>dataloader</w>
-      <w>dataset</w>
-      <w>gcpl</w>
-      <w>testloader</w>
-      <w>testset</w>
-      <w>trainloader</w>
-      <w>trainset</w>
+      <w>cifar</w>
+      <w>mnist</w>
     </words>
   </dictionary>
 </component>
