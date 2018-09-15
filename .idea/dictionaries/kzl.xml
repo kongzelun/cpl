@@ -1,20 +1,8 @@
 <component name="ProjectDictionaryState">
   <dictionary name="kzl">
     <words>
-      <w>conv</w>
-      <w>cplnet</w>
-      <w>cuda</w>
-      <w>dataloader</w>
-      <w>dataset</w>
-      <w>droprate</w>
-      <w>gcpl</w>
+      <w>cifar</w>
       <w>mnist</w>
-      <w>optim</w>
-      <w>relu</w>
-      <w>testloader</w>
-      <w>testset</w>
-      <w>trainloader</w>
-      <w>trainset</w>
     </words>
   </dictionary>
 </component>

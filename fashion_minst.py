@@ -56,7 +56,7 @@ class CNNNet(nn.Module):
 
 
 class DenseNet(nn.Module):
-    def __init__(self, device, number_layers, growth_rate, reduction=1.0, bottleneck=True, drop_rate=0.0):
+    def __init__(self, device, number_layers, growth_rate, reduction=2, bottleneck=True, drop_rate=0.0):
         super(DenseNet, self).__init__()
 
         channels = 2 * growth_rate
@@ -72,23 +72,23 @@ class DenseNet(nn.Module):
         # 1st block
         self.block1 = dense_net.DenseBlock(number_layers, channels, block, growth_rate, drop_rate)
         channels = channels + number_layers * growth_rate
-        self.trans1 = dense_net.TransitionBlock(channels, int(channels * reduction), drop_rate)
-        channels = int(channels * reduction)
+        self.trans1 = dense_net.TransitionBlock(channels, int(channels / reduction), drop_rate)
+        channels = int(channels / reduction)
 
         # 2nd block
         self.block2 = dense_net.DenseBlock(number_layers, channels, block, growth_rate, drop_rate)
         channels = channels + number_layers * growth_rate
-        self.trans2 = dense_net.TransitionBlock(channels, int(channels * reduction), drop_rate)
-        channels = int(channels * reduction)
+        self.trans2 = dense_net.TransitionBlock(channels, int(channels / reduction), drop_rate)
+        channels = int(channels / reduction)
 
         # 3rd block
-        self.block2 = dense_net.DenseBlock(number_layers, channels, block, growth_rate, drop_rate)
+        self.block3 = dense_net.DenseBlock(number_layers, channels, block, growth_rate, drop_rate)
         channels = channels + number_layers * growth_rate
 
         # global average pooling and classifier
         self.bn1 = nn.BatchNorm2d(channels)
         self.relu = nn.ReLU(inplace=True)
-        self.pooling = nn.AvgPool2d(kernel_size=8)
+        self.pooling = nn.AvgPool2d(kernel_size=1)
 
         self.channels = channels
 
@@ -96,10 +96,10 @@ class DenseNet(nn.Module):
         self.to(device)
 
     def forward(self, x):
-        x = self.conv1(x)
-        x = self.trans1(self.block1(x))
-        x = self.trans2(self.block2(x))
-        x = self.block3(x)
-        x = self.relu(self.bn1(x))
-        out = self.pooling(x)
+        out = self.conv1(x)
+        out = self.trans1(self.block1(out))
+        out = self.trans2(self.block2(out))
+        out = self.block3(out)
+        out = self.relu(self.bn1(out))
+        out = self.pooling(out)
         return out
