@@ -44,13 +44,16 @@ def train(net, dataloader, criterion, optimizer):
         # extract abstract feature through CNN.
         feature = net(feature).view(1, -1)
 
-        closest_prototype_index, min_distance = functions.assign_prototype(tensor(feature.data), label, all_prototypes, tensor(threshold).to(net.device))
+        closest_prototype_index, min_distance = functions.assign_prototype(tensor(feature.data), label, all_prototypes, threshold)
 
-        if (i + 1) % 100 == 0:
-            threshold = distances_sum / 100
-            distances_sum = 0.0
-        else:
-            distances_sum += min_distance
+        # if (i + 1) % 100 == 0:
+        #     threshold = distances_sum / 100
+        #     distances_sum = 0.0
+        # else:
+        #     distances_sum += min_distance
+
+        distances_sum += min_distance
+        threshold = distances_sum / (i + 1)
 
         loss = criterion(feature, label, all_prototypes, all_prototypes[label][closest_prototype_index])
         loss.backward()
