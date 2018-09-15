@@ -6,9 +6,16 @@ import dense_net
 
 
 class Config:
-    dataset_path = 'data/fashion-mnist_train.csv'
-    pkl_path = "pkl/fashion-mnist.pkl"
-    threshold = 1.5
+    # dataset_path = 'data/fashion-mnist_train.csv'
+    # pkl_path = "pkl/fashion-mnist.pkl"
+    # tensor_view = (-1, 28, 28)
+    # in_channels = 1
+    dataset_path = 'data/cifar10_train.csv'
+    pkl_path = "pkl/cifar10.pkl"
+    tensor_view = (-1, 32, 32)
+    in_channels = 3
+
+    threshold = 1.0
 
 
 class FashionMnist(Dataset):
@@ -16,7 +23,7 @@ class FashionMnist(Dataset):
         self.data = []
 
         for s in dataset:
-            x = (tensor(s[:-1], dtype=torch.float) / 255).view(-1, 28, 28)
+            x = (tensor(s[:-1], dtype=torch.float) / 255).view(*Config.tensor_view)
             y = tensor(s[-1], dtype=torch.long)
             self.data.append((x, y))
 
@@ -32,17 +39,13 @@ class CNNNet(nn.Module):
         super(CNNNet, self).__init__()
 
         self.conv1 = nn.Sequential(
-            # [batch_size, 1, 28, 28]
-            nn.Conv2d(in_channels=1, out_channels=50, kernel_size=7, padding=3),
+            nn.Conv2d(in_channels=Config.in_channels, out_channels=10, kernel_size=5, padding=2),
             nn.ReLU(),
-            # [batch_size, 50, 28, 28]
             nn.MaxPool2d(2, 2)
         )
         self.conv2 = nn.Sequential(
-            # [batch_size, 50, 14, 14]
-            nn.Conv2d(in_channels=50, out_channels=100, kernel_size=5, padding=2),
+            nn.Conv2d(in_channels=10, out_channels=10, kernel_size=3, padding=1),
             nn.ReLU(),
-            # [batch_size, 100, 14, 14]
             nn.MaxPool2d(2, 2)
         )
 
@@ -67,7 +70,7 @@ class DenseNet(nn.Module):
             block = dense_net.BasicBlock
 
         # 1st conv before any dense block
-        self.conv1 = nn.Conv2d(in_channels=1, out_channels=channels, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv1 = nn.Conv2d(in_channels=Config.in_channels, out_channels=channels, kernel_size=3, stride=1, padding=1, bias=False)
 
         # 1st block
         self.block1 = dense_net.DenseBlock(number_layers, channels, block, growth_rate, drop_rate)
@@ -88,7 +91,9 @@ class DenseNet(nn.Module):
         # global average pooling and classifier
         self.bn1 = nn.BatchNorm2d(channels)
         self.relu = nn.ReLU(inplace=True)
-        self.pooling = nn.AvgPool2d(kernel_size=1)
+        self.pooling = nn.AvgPool2d(kernel_size=2)
+
+        self.fc1 = nn.Linear(channels, 100)
 
         self.channels = channels
 

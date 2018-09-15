@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from torch import tensor
 
 compute_distance = nn.PairwiseDistance(p=2)
 compute_multi_distance = nn.PairwiseDistance(p=2, keepdim=True)
@@ -38,7 +39,8 @@ def assign_prototype(feature, label, all_prototypes, threshold):
             all_prototypes[label].update(closest_prototype_index, feature)
         else:
             all_prototypes[label].append(feature)
-            min_distance = 0.0
+            closest_prototype_index = len(all_prototypes[label]) - 1
+            # min_distance = 0.0
 
     return closest_prototype_index, min_distance
 
@@ -124,7 +126,14 @@ def compute_probability(feature, label, all_prototypes, gamma):
     prototypes = torch.cat(all_prototypes[label].prototypes)
     distances = compute_multi_distance(feature, prototypes)
     distances = (-gamma * distances.pow(2)).exp()
-    probability = distances.sum() / one
+
+    if one > 0.0:
+        probability = distances.sum() / one
+    else:
+        probability = one + 0.1
+
+    if not probability > 0.0:
+        probability += 1e-6
 
     return probability
 
@@ -190,6 +199,35 @@ class GCPLLoss(nn.Module):
         p_loss = compute_distance(feature, closest_prototype).pow(2)
 
         return dce_loss + self.lambda_ * p_loss
+
+
+class PairwiseLoss(nn.Module):
+    def __init__(self, tao=10.0, b=1.0, beta=1.0):
+        super(PairwiseLoss, self).__init__()
+        self.tao = tao
+        self.b = b
+        self.beta = beta
+
+    def _g(self, z):
+        z = tensor(z)
+        if z > 10:
+            value = z
+        else:
+            value = (1 + (self.beta * z).exp()).log() / self.beta
+
+        return value
+
+    def forward(self, feature1, feature2, label1, label2):
+        distance = compute_distance(feature1, feature2)
+
+        if label1 == label2:
+            like = 1
+        else:
+            like = -1
+
+        c = self.b - like * (self.tao - distance)
+
+        return self._g(c)
 
 
 class Prototypes(object):
