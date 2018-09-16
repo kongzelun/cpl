@@ -137,7 +137,7 @@ def predict(feature, all_prototypes, gamma):
 def main():
     logger = setup_logger(level=logging.DEBUG, filename='log.txt')
 
-    train_epoch_number = 1
+    train_epoch_number = 100
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -169,11 +169,11 @@ def main():
 
     for epoch in range(train_epoch_number):
         logger.info("Trainset size: %d, Epoch number: %d", len(trainset), epoch + 1)
-        logger.info("Threshold: %f", models.Config.threshold)
 
+        # CPL train
+        # logger.info("Threshold: %f", models.Config.threshold)
         # prototypes = train(net, trainloader, gcpl, sgd)
-        train(net, trainloader, cel, sgd)
-        torch.save(net.state_dict(), models.Config.pkl_path)
+        # torch.save(net.state_dict(), models.Config.pkl_path)
 
         # prototype_count = 0
 
@@ -183,6 +183,11 @@ def main():
         # logger.info("Prototype Count: %d", prototype_count)
 
         # accuracy = test(net, testloader, prototypes, gcpl.gamma)
+
+        # CEL train
+        train(net, trainloader, cel, sgd)
+
+        torch.save(net.state_dict(), models.Config.pkl_path)
         accuracy = test(net, testloader)
 
         logger.info("Accuracy: %.4f", accuracy)
