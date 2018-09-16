@@ -187,7 +187,7 @@ def compute_probability(feature, label, all_prototypes, gamma):
 #         self.sample_count += 1
 
 class GCPLLoss(nn.Module):
-    def __init__(self, gamma=1.0, lambda_=0.1):
+    def __init__(self, gamma=0.1, lambda_=0.1):
         super(GCPLLoss, self).__init__()
 
         self.lambda_ = lambda_

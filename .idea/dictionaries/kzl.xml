@@ -2,7 +2,17 @@
   <dictionary name="kzl">
     <words>
       <w>cifar</w>
+      <w>dataloader</w>
+      <w>dataset</w>
+      <w>ddml</w>
+      <w>gcpl</w>
       <w>mnist</w>
+      <w>optim</w>
+      <w>relu</w>
+      <w>testloader</w>
+      <w>testset</w>
+      <w>trainloader</w>
+      <w>trainset</w>
     </words>
   </dictionary>
 </component>

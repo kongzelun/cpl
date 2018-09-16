@@ -26,66 +26,98 @@ def setup_logger(level=logging.DEBUG, filename=None):
     return logger
 
 
+# def train(net, dataloader, criterion, optimizer):
+#     logger = logging.getLogger(__name__)
+#     loss_sum = 0.0
+#
+#     threshold = models.Config.threshold
+#
+#     all_prototypes = {}
+#
+#     # distances_sum = 0.0
+#
+#     for i, (feature, label) in enumerate(dataloader):
+#         feature, label = feature.to(net.device), int(label)
+#
+#         optimizer.zero_grad()
+#
+#         # extract abstract feature through CNN.
+#         feature = net(feature).view(1, -1)
+#
+#         closest_prototype_index, min_distance = functions.assign_prototype(tensor(feature.data), label, all_prototypes, threshold)
+#
+#         # if (i + 1) % 10 == 0:
+#         #     threshold = distances_sum / 100
+#         #     distances_sum = 0.0
+#         # else:
+#         #     distances_sum += min_distance
+#
+#         # distances_sum += min_distance
+#         # threshold = distances_sum / (i + 1)
+#
+#         loss = criterion(feature, label, all_prototypes, all_prototypes[label][closest_prototype_index])
+#
+#         loss.backward()
+#         optimizer.step()
+#
+#         loss_sum += loss
+#
+#         logger.debug("%5d: Loss: %6.4f, Distance: %6.4f, Threshold: %6.4f", i + 1, loss, min_distance, threshold)
+#
+#     logger.info("Loss Average: %6.4f", loss_sum / len(dataloader))
+#
+#     return all_prototypes
+
 def train(net, dataloader, criterion, optimizer):
     logger = logging.getLogger(__name__)
-    loss_sum = 0.0
-
-    threshold = models.Config.threshold
-
-    all_prototypes = {}
-
-    distances_sum = 0.0
 
     for i, (feature, label) in enumerate(dataloader):
-        feature, label = feature.to(net.device), int(label)
-
+        feature, label = feature.to(net.device), label.to(net.device)
         optimizer.zero_grad()
-
-        # extract abstract feature through CNN.
-        feature = net(feature).view(1, -1)
-
-        closest_prototype_index, min_distance = functions.assign_prototype(tensor(feature.data), label, all_prototypes, threshold)
-
-        # if (i + 1) % 100 == 0:
-        #     threshold = distances_sum / 100
-        #     distances_sum = 0.0
-        # else:
-        #     distances_sum += min_distance
-
-        distances_sum += min_distance
-        threshold = distances_sum / (i + 1)
-
-        loss = criterion(feature, label, all_prototypes, all_prototypes[label][closest_prototype_index])
+        out = net(feature).view(1, -1)
+        loss = criterion(out, label)
         loss.backward()
         optimizer.step()
 
-        loss_sum += loss
-
-        logger.debug("%5d: Loss: %6.4f, Distance: %6.4f, Threshold: %6.4f", i + 1, loss, min_distance, threshold)
-
-    logger.info("Loss Average: %6.4f", loss_sum / len(dataloader))
-
-    return all_prototypes
+        logger.debug("%5d: Loss: %6.4f", i + 1, loss)
 
 
-def test(net, dataloader, all_prototypes, gamma):
+# def test(net, dataloader, all_prototypes, gamma):
+#     logger = logging.getLogger(__name__)
+#
+#     correct = 0
+#
+#     for i, (feature, label) in enumerate(dataloader):
+#         feature, label = feature.to(net.device), int(label)
+#
+#         # extract abstract feature through CNN.
+#         feature = net(feature).view(1, -1)
+#
+#         predicted_label, probability = predict(feature, all_prototypes, gamma)
+#
+#         if label == predicted_label:
+#             correct += 1
+#
+#         logger.debug("%5d: Label: %d, Prediction: %d, Probability: %.4f, Accuracy: %.4f",
+#                      i + 1, label, predicted_label, probability, correct / (i + 1))
+#
+#     return correct / len(dataloader)
+
+def test(net, dataloader):
     logger = logging.getLogger(__name__)
 
     correct = 0
 
     for i, (feature, label) in enumerate(dataloader):
-        feature, label = feature.to(net.device), int(label)
+        feature, label = feature.to(net.device), label.to(net.device)
+        out = net(feature).view(1, -1)
 
-        # extract abstract feature through CNN.
-        feature = net(feature).view(1, -1)
-
-        predicted_label, probability = predict(feature, all_prototypes, gamma)
+        predicted_label = out.max(dim=1)[1]
 
         if label == predicted_label:
             correct += 1
 
-        logger.debug("%5d: Label: %d, Prediction: %d, Probability: %.4f, Accuracy: %.4f",
-                     i + 1, label, predicted_label, probability, correct / (i + 1))
+        logger.debug("%5d: Label: %d, Prediction: %d, Accuracy: %.4f", i + 1, label, predicted_label, correct / (i + 1))
 
     return correct / len(dataloader)
 
@@ -112,14 +144,15 @@ def main():
     dataset = np.loadtxt(models.Config.dataset_path, delimiter=',')
 
     trainset = models.FashionMnist(dataset[:5000])
-    trainloader = DataLoader(dataset=trainset, batch_size=1, shuffle=True, num_workers=4)
+    trainloader = DataLoader(dataset=trainset, batch_size=1, shuffle=True, num_workers=16)
 
     testset = models.FashionMnist(dataset[5000:10000])
-    testloader = DataLoader(dataset=testset, batch_size=1, shuffle=False, num_workers=4)
+    testloader = DataLoader(dataset=testset, batch_size=1, shuffle=False, num_workers=16)
 
     # net = models.CNNNet(device=device)
     net = models.DenseNet(device=device, number_layers=6, growth_rate=8, drop_rate=0.1)
-    gcpl = functions.GCPLLoss(gamma=1.0, lambda_=0.1)
+    cel = torch.nn.CrossEntropyLoss()
+    # gcpl = functions.GCPLLoss(gamma=1.0, lambda_=0.1)
     # ddml = functions.PairwiseLoss(tao=10.0, b=1.0, beta=0.5)
     sgd = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
@@ -138,18 +171,19 @@ def main():
         logger.info("Trainset size: %d, Epoch number: %d", len(trainset), epoch + 1)
         logger.info("Threshold: %f", models.Config.threshold)
 
-        prototypes = train(net, trainloader, gcpl, sgd)
-
+        # prototypes = train(net, trainloader, gcpl, sgd)
+        train(net, trainloader, cel, sgd)
         torch.save(net.state_dict(), models.Config.pkl_path)
 
-        prototype_count = 0
+        # prototype_count = 0
 
-        for c in prototypes:
-            prototype_count += len(prototypes[c])
+        # for c in prototypes:
+        #     prototype_count += len(prototypes[c])
 
-        logger.info("Prototype Count: %d", prototype_count)
+        # logger.info("Prototype Count: %d", prototype_count)
 
-        accuracy = test(net, testloader, prototypes, gcpl.gamma)
+        # accuracy = test(net, testloader, prototypes, gcpl.gamma)
+        accuracy = test(net, testloader)
 
         logger.info("Accuracy: %.4f", accuracy)
 
