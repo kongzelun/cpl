@@ -2,6 +2,8 @@
   <dictionary name="kzl">
     <words>
       <w>cifar</w>
+      <w>conv</w>
+      <w>cuda</w>
       <w>dataloader</w>
       <w>dataset</w>
       <w>ddml</w>

@@ -254,7 +254,7 @@ class Prototypes(object):
         return len(self.prototypes)
 
     def __iter__(self):
-        return self
+        return self.prototypes
 
     def __next__(self):
         return next(self.prototypes)
