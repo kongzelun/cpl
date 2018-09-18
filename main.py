@@ -31,14 +31,14 @@ def train(net, dataloader, criterion, optimizer, pairwise=False):
 
     threshold = models.Config.threshold
 
+    gcpl = criterion[0]
+    pwl = criterion[1]
+
     all_prototypes = {}
 
     logger.info("Threshold: %6.4f", threshold)
 
     if pairwise:
-
-        gcpl = criterion[0]
-        pwl = criterion[1]
 
         for i, (s0, s1) in enumerate(dataloader):
             feature0, label0 = s0[0].to(net.device), int(s0[1])
@@ -77,7 +77,7 @@ def train(net, dataloader, criterion, optimizer, pairwise=False):
 
             feature = net(feature).view(1, -1)
 
-            loss = criterion(feature, label, all_prototypes)
+            loss = gcpl(feature, label, all_prototypes)
 
             loss.backward()
             optimizer.step()
@@ -179,7 +179,7 @@ def main():
     testloader = DataLoader(dataset=testset, batch_size=1, shuffle=False, num_workers=2)
 
     # net = models.CNNNet(device=device)
-    net = models.DenseNet(device=device, number_layers=8, growth_rate=16, drop_rate=0.0)
+    net = models.DenseNet(device=device, number_layers=16, growth_rate=16, drop_rate=0.0)
     # cel = torch.nn.CrossEntropyLoss()
     gcpl = functions.GCPLLoss(threshold=models.Config.threshold, gamma=0.1, lambda_=0.001)
     pwl = functions.PairwiseLoss(tao=10.0, b=2.0, beta=0.5)
