@@ -2,7 +2,6 @@ import os
 import logging
 import numpy as np
 import torch
-from torch import tensor
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import models
@@ -26,10 +25,9 @@ def setup_logger(level=logging.DEBUG, filename=None):
     return logger
 
 
-def train(net, dataloader, criterion, optimizer):
+def train(net, dataloader, criterion, optimizer, pairwise=False):
     logger = logging.getLogger(__name__)
     loss_sum = 0.0
-    distance_sum = 0.0
 
     threshold = models.Config.threshold
 
@@ -37,40 +35,58 @@ def train(net, dataloader, criterion, optimizer):
 
     logger.info("Threshold: %6.4f", threshold)
 
-    for i, (feature, label) in enumerate(dataloader):
-        feature, label = feature.to(net.device), int(label)
+    if pairwise:
 
-        optimizer.zero_grad()
+        gcpl = criterion[0]
+        pwl = criterion[1]
 
-        # extract abstract feature through CNN.
-        feature = net(feature).view(1, -1)
+        for i, (s0, s1) in enumerate(dataloader):
+            feature0, label0 = s0[0].to(net.device), int(s0[1])
+            feature1, label1 = s1[0].to(net.device), int(s1[1])
 
-        closest_prototype_index, min_distance = functions.assign_prototype(tensor(feature.data), label, all_prototypes, threshold)
+            optimizer.zero_grad()
 
-        distance_sum += min_distance
+            # extract abstract feature through CNN.
+            feature0 = net(feature0).view(1, -1)
+            feature1 = net(feature1).view(1, -1)
 
-        # if (i + 1) % 10 == 0:
-        #     threshold = distances_sum / 100
-        #     distances_sum = 0.0
-        # else:
-        #     distances_sum += min_distance
+            # if (i + 1) % 10 == 0:
+            #     threshold = distances_sum / 100
+            #     distances_sum = 0.0
+            # else:
+            #     distances_sum += min_distance
 
-        # distances_sum += min_distance
-        # threshold = distances_sum / (i + 1)
+            # distances_sum += min_distance
+            # threshold = distances_sum / (i + 1)
 
-        loss = criterion(feature, label, all_prototypes, all_prototypes[label][closest_prototype_index])
+            loss0 = gcpl(feature0, label0, all_prototypes)
+            loss1 = gcpl(feature1, label1, all_prototypes)
+            loss = pwl(feature0, feature1, label0, label1)
+            loss = loss + loss0 + loss1
+            loss.backward()
+            optimizer.step()
 
-        loss.backward()
-        optimizer.step()
+            loss_sum += loss
 
-        loss_sum += loss
+            logger.debug("%5d: Loss: %7.4f", i + 1, loss)
+    else:
+        for i, (feature, label) in enumerate(dataloader):
+            feature, label = feature.to(net.device), int(label)
 
-        logger.debug("%5d: Loss: %6.4f, Distance: %6.4f", i + 1, loss, min_distance)
+            optimizer.zero_grad()
 
-    models.Config.threshold = distance_sum / len(dataloader)
+            feature = net(feature).view(1, -1)
 
-    logger.info("Loss Average: %6.4f", loss_sum / len(dataloader))
-    logger.info("Distance Average: %6.5f", distance_sum / len(dataloader))
+            loss = criterion(feature, label, all_prototypes)
+
+            loss.backward()
+            optimizer.step()
+
+            loss_sum += loss
+
+            logger.debug("%5d: Loss: %7.4f", i + 1, loss)
+
+    logger.info("Loss Average: %7.4f", loss_sum / len(dataloader))
 
     return all_prototypes
 
@@ -98,6 +114,8 @@ def train(net, dataloader, criterion, optimizer):
 def test(net, dataloader, all_prototypes, gamma):
     logger = logging.getLogger(__name__)
 
+    distance_sum = 0.0
+
     correct = 0
 
     for i, (feature, label) in enumerate(dataloader):
@@ -106,13 +124,17 @@ def test(net, dataloader, all_prototypes, gamma):
         # extract abstract feature through CNN.
         feature = net(feature).view(1, -1)
 
-        predicted_label, probability = predict(feature, all_prototypes, gamma)
+        predicted_label, probability, min_distance = functions.predict(feature, all_prototypes, gamma)
 
         if label == predicted_label:
             correct += 1
 
-        logger.debug("%5d: Label: %d, Prediction: %d, Probability: %.4f, Accuracy: %.4f",
-                     i + 1, label, predicted_label, probability, correct / (i + 1))
+        distance_sum += min_distance
+
+        logger.debug("%5d: Label: %d, Prediction: %d, Probability: %7.4f, Distance: %7.4f, Accuracy: %7.4f",
+                     i + 1, label, predicted_label, probability, min_distance, correct / (i + 1))
+
+    logger.info("Distance Average: %7.4f", distance_sum / len(dataloader))
 
     return correct / len(dataloader)
 
@@ -136,38 +158,31 @@ def test(net, dataloader, all_prototypes, gamma):
 #     return correct / len(dataloader)
 
 
-def predict(feature, all_prototypes, gamma):
-    probabilities = {}
-
-    for label in all_prototypes:
-        probability = functions.compute_probability(feature, label, all_prototypes, gamma)
-        probabilities[label] = probability
-
-    predicted_label = max(probabilities, key=probabilities.get)
-
-    return predicted_label, probabilities[predicted_label]
-
-
 def main():
     logger = setup_logger(level=logging.DEBUG, filename='log.txt')
 
     train_epoch_number = 1
 
+    batch_size = 1
+
+    pairwise = False
+
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     dataset = np.loadtxt(models.Config.dataset_path, delimiter=',')
+    np.random.shuffle(dataset[:5000])
 
-    trainset = models.DataSet(dataset[:5000])
-    trainloader = DataLoader(dataset=trainset, batch_size=1, shuffle=True, num_workers=24)
+    trainset = models.DataSet(dataset[:5000], pairwise=pairwise)
+    trainloader = DataLoader(dataset=trainset, batch_size=batch_size, shuffle=True, num_workers=24)
 
     testset = models.DataSet(dataset[5000:])
     testloader = DataLoader(dataset=testset, batch_size=1, shuffle=False, num_workers=2)
 
-    net = models.CNNNet(device=device)
-    # net = models.DenseNet(device=device, number_layers=6, growth_rate=16, drop_rate=0.0)
+    # net = models.CNNNet(device=device)
+    net = models.DenseNet(device=device, number_layers=8, growth_rate=16, drop_rate=0.0)
     # cel = torch.nn.CrossEntropyLoss()
-    gcpl = functions.GCPLLoss(gamma=1.0, lambda_=0.001)
-    # ddml = functions.PairwiseLoss(tao=10.0, b=1.0, beta=0.5)
+    gcpl = functions.GCPLLoss(threshold=models.Config.threshold, gamma=0.1, lambda_=0.001)
+    pwl = functions.PairwiseLoss(tao=10.0, b=2.0, beta=0.5)
     sgd = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
     if not os.path.exists("pkl"):
@@ -185,7 +200,7 @@ def main():
         logger.info("Trainset size: %d, Epoch number: %d", len(trainset), epoch + 1)
 
         # CPL train
-        prototypes = train(net, trainloader, gcpl, sgd)
+        prototypes = train(net, trainloader, (gcpl, pwl), sgd, pairwise=pairwise)
         torch.save(net.state_dict(), models.Config.pkl_path)
 
         prototype_count = 0
@@ -196,7 +211,7 @@ def main():
         logger.info("Prototype Count: %d", prototype_count)
 
         accuracy = test(net, testloader, prototypes, gcpl.gamma)
-        logger.info("Accuracy: %.4f\n", accuracy)
+        logger.info("Accuracy: %7.4f\n", accuracy)
 
         # CEL train
         # train(net, trainloader, cel, sgd)

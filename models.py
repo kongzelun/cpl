@@ -15,12 +15,13 @@ class Config:
     tensor_view = (-1, 32, 32)
     in_channels = 3
 
-    threshold = 2.0
+    threshold = 20.0
 
 
 class DataSet(Dataset):
-    def __init__(self, dataset):
+    def __init__(self, dataset, pairwise=False):
         self.data = []
+        self.pairwise = pairwise
 
         for s in dataset:
             x = (tensor(s[:-1], dtype=torch.float) / 255).view(*Config.tensor_view)
@@ -28,7 +29,11 @@ class DataSet(Dataset):
             self.data.append((x, y))
 
     def __getitem__(self, index):
-        return self.data[index]
+        if self.pairwise:
+
+            return self.data[index], self.data[(index + 1) if not index < len(self) else -1]
+        else:
+            return self.data[index]
 
     def __len__(self):
         return len(self.data)
@@ -91,7 +96,7 @@ class DenseNet(nn.Module):
         # global average pooling and classifier
         self.bn1 = nn.BatchNorm2d(channels)
         self.relu = nn.ReLU(inplace=True)
-        self.pooling = nn.AvgPool2d(kernel_size=8)
+        self.pooling = nn.AvgPool2d(kernel_size=2)
 
         # self.fc1 = nn.Linear(channels * 4 * 4, 100)
         # self.fc2 = nn.Linear(100, 10)
