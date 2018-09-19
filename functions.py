@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 from torch import tensor
 
-compute_distance = nn.PairwiseDistance(p=2)
-compute_multi_distance = nn.PairwiseDistance(p=2, keepdim=True)
+compute_distance = nn.PairwiseDistance(p=2, eps=1e-6)
+compute_multi_distance = nn.PairwiseDistance(p=2, eps=1e-6, keepdim=True)
 
 
 # def assign_prototype(feature, label, all_prototypes, threshold):
@@ -136,24 +136,20 @@ def predict(feature, all_prototypes, gamma):
 
 def compute_probability(feature, label, all_prototypes, gamma):
     one = 0.0
+    probability = 1e-6
 
     for l in all_prototypes:
         prototypes = torch.cat(all_prototypes[l].prototypes)
         distances = compute_multi_distance(feature, prototypes)
-        distances = (-gamma * distances.pow(2)).exp()
-        one += distances.sum()
+        one += (-gamma * distances.pow(2)).exp().sum()
 
     prototypes = torch.cat(all_prototypes[label].prototypes)
     distances = compute_multi_distance(feature, prototypes)
-    distances = (-gamma * distances.pow(2)).exp()
 
     if one > 0.0:
-        probability = distances.sum() / one
+        probability += (-gamma * distances.pow(2)).exp().sum() / one
     else:
-        probability = one + 0.1
-
-    if not probability > 0.0:
-        probability += 1e-6
+        probability += one + 0.1
 
     return probability
 

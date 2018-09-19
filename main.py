@@ -39,7 +39,6 @@ def train(net, dataloader, criterion, optimizer, pairwise=False):
     logger.info("Threshold: %6.4f", threshold)
 
     if pairwise:
-
         for i, (s0, s1) in enumerate(dataloader):
             feature0, label0 = s0[0].to(net.device), int(s0[1])
             feature1, label1 = s1[0].to(net.device), int(s1[1])
@@ -134,9 +133,7 @@ def test(net, dataloader, all_prototypes, gamma):
         logger.debug("%5d: Label: %d, Prediction: %d, Probability: %7.4f, Distance: %7.4f, Accuracy: %7.4f",
                      i + 1, label, predicted_label, probability, min_distance, correct / (i + 1))
 
-    logger.info("Distance Average: %7.4f", distance_sum / len(dataloader))
-
-    return correct / len(dataloader)
+    return correct / len(dataloader), distance_sum / len(dataloader)
 
 
 # def test(net, dataloader):
@@ -161,7 +158,7 @@ def test(net, dataloader, all_prototypes, gamma):
 def main():
     logger = setup_logger(level=logging.DEBUG, filename='log.txt')
 
-    train_epoch_number = 10
+    train_epoch_number = 200
 
     batch_size = 1
 
@@ -179,9 +176,11 @@ def main():
     testloader = DataLoader(dataset=testset, batch_size=1, shuffle=False, num_workers=2)
 
     # net = models.CNNNet(device=device)
-    net = models.DenseNet(device=device, number_layers=16, growth_rate=16, drop_rate=0.0)
+    net = models.DenseNet(device=device, number_layers=8, growth_rate=12, drop_rate=0.0)
+    logger.info("DenseNet Channels: %d", net.channels)
+
     # cel = torch.nn.CrossEntropyLoss()
-    gcpl = functions.GCPLLoss(threshold=models.Config.threshold, gamma=0.1, lambda_=0.001)
+    gcpl = functions.GCPLLoss(threshold=models.Config.threshold, gamma=models.Config.gamma, lambda_=0.01)
     pwl = functions.PairwiseLoss(tao=10.0, b=2.0, beta=0.5)
     sgd = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
@@ -210,7 +209,11 @@ def main():
 
         logger.info("Prototype Count: %d", prototype_count)
 
-        accuracy = test(net, testloader, prototypes, gcpl.gamma)
+        accuracy, average_distance = test(net, testloader, prototypes, gcpl.gamma)
+
+        models.Config.threshold = average_distance * 1.5
+
+        logger.info("Distance Average: %7.4f", average_distance)
         logger.info("Accuracy: %7.4f\n", accuracy)
 
         # CEL train

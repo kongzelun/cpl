@@ -17,6 +17,9 @@ class Config:
 
     threshold = 10.0
 
+    # gamma * threshold < 10
+    gamma = 1.0
+
 
 class DataSet(Dataset):
     def __init__(self, dataset, pairwise=False):
@@ -80,14 +83,14 @@ class DenseNet(nn.Module):
         # 1st block
         self.block1 = dense_net.DenseBlock(number_layers, channels, block, growth_rate, drop_rate)
         channels = channels + number_layers * growth_rate
-        self.trans1 = dense_net.TransitionBlock(channels, int(channels / reduction), drop_rate)
-        channels = int(channels / reduction)
+        self.trans1 = dense_net.TransitionBlock(channels, channels // reduction, drop_rate)
+        channels = channels // reduction
 
         # 2nd block
         self.block2 = dense_net.DenseBlock(number_layers, channels, block, growth_rate, drop_rate)
         channels = channels + number_layers * growth_rate
-        self.trans2 = dense_net.TransitionBlock(channels, int(channels / reduction), drop_rate)
-        channels = int(channels / reduction)
+        self.trans2 = dense_net.TransitionBlock(channels, channels // reduction, drop_rate)
+        channels = channels // reduction
 
         # 3rd block
         self.block3 = dense_net.DenseBlock(number_layers, channels, block, growth_rate, drop_rate)
