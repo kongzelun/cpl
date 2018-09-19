@@ -15,7 +15,7 @@ class Config:
     tensor_view = (-1, 32, 32)
     in_channels = 3
 
-    threshold = 20.0
+    threshold = 10.0
 
 
 class DataSet(Dataset):

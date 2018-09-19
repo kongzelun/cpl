@@ -90,7 +90,7 @@ def find_closest_prototype(feature, all_prototypes):
     for l in all_prototypes:
         prototypes = torch.cat(all_prototypes[l].prototypes)
         distances = compute_multi_distance(feature, prototypes)
-        d = distances.min()
+        d = float(distances.min())
         if min_distance is None or d < min_distance:
             min_distance = d
             label = l
@@ -113,7 +113,7 @@ def predict(feature, all_prototypes, gamma):
     predicted_label, min_distance = find_closest_prototype(feature, all_prototypes)
     probability = compute_probability(feature, predicted_label, all_prototypes, gamma)
 
-    return predicted_label, probability, min_distance
+    return predicted_label, float(probability), min_distance
 
 
 # def compute_probability(feature, label, all_prototypes, gamma):

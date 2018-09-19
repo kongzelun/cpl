@@ -161,7 +161,7 @@ def test(net, dataloader, all_prototypes, gamma):
 def main():
     logger = setup_logger(level=logging.DEBUG, filename='log.txt')
 
-    train_epoch_number = 1
+    train_epoch_number = 10
 
     batch_size = 1
 
