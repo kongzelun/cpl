@@ -41,13 +41,13 @@ def main():
     testloader = DataLoader(dataset=testset, batch_size=1, shuffle=False, num_workers=2)
 
     # net = models.CNNNet(device=device)
-    net = models.DenseNet(device=device, number_layers=8, growth_rate=16, drop_rate=0.0)
+    net = models.DenseNet(device=device, number_layers=8, growth_rate=12, drop_rate=0.0)
     logger.info("DenseNet Channels: %d", net.channels)
 
     prototypes = {}
 
     # cel = torch.nn.CrossEntropyLoss()
-    gcpl = models.GCPLLoss(threshold=models.Config.threshold, gamma=models.Config.gamma, tao=models.Config.threshold, b=1.0, beta=0.5, lambda_=0.001)
+    gcpl = models.GCPLLoss(threshold=models.Config.threshold, gamma=models.Config.gamma, tao=models.Config.tao, b=1.0, beta=0.5, lambda_=models.Config.lambda_)
     sgd = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
     if not os.path.exists("pkl"):
@@ -63,6 +63,8 @@ def main():
 
     for epoch in range(train_epoch_number):
         logger.info("Trainset size: %d, Epoch number: %d", len(trainset), epoch + 1)
+
+        prototypes.clear()
 
         running_loss = 0.0
 

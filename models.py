@@ -15,7 +15,9 @@ class Config:
     tensor_view = (-1, 32, 32)
     in_channels = 3
 
-    threshold = 20.0
+    threshold = 15.0
+    tao = 5.0
+    lambda_ = 0.01
 
     # gamma * threshold ~ 1
     gamma = 0.1
@@ -62,7 +64,7 @@ class CNNNet(nn.Module):
 
 
 class DenseNet(nn.Module):
-    def __init__(self, device, number_layers, growth_rate, reduction=2, bottleneck=True, drop_rate=0.0):
+    def __init__(self, device, number_layers=6, growth_rate=12, reduction=2, bottleneck=True, drop_rate=0.0):
         super(DenseNet, self).__init__()
 
         channels = 2 * growth_rate
@@ -159,14 +161,14 @@ class GCPLLoss(nn.Module):
         # p_loss = compute_distance(feature, closest_prototype).pow(2)
 
         # pairwise loss
-        pw_loss = self._g(self.b - (self.tao - compute_distance(feature, closest_prototype)))
+        pw_loss = self._g(self.b - (self.tao - compute_distance(feature, closest_prototype).pow(2)))
 
         for l in all_prototypes:
             if label != l:
                 prototypes = torch.cat(all_prototypes[l].features)
                 distances = compute_multi_distance(feature, prototypes)
-                d = distances.min()
-                pw_loss += self._g(self.b + (self.tao - d))
+                d = distances.min().pow(2)
+                pw_loss += self._g(self.b + (self.tao - d) * 0.125)
 
         return dce_loss + self.lambda_ * pw_loss, min_distance
 
