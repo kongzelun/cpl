@@ -17,8 +17,8 @@ class Config:
 
     threshold = 20.0
 
-    # gamma * threshold < 10
-    gamma = 0.5
+    # gamma * threshold ~ 1
+    gamma = 0.1
 
 
 class DataSet(Dataset):
@@ -152,15 +152,14 @@ class GCPLLoss(nn.Module):
         self.beta = beta
 
     def forward(self, feature, label, all_prototypes):
-        closest_prototype = self.assign_prototype(feature.data, label, all_prototypes)
+        closest_prototype, min_distance = self.assign_prototype(feature.data, label, all_prototypes)
 
         probability = compute_probability(feature, label, all_prototypes, gamma=self.gamma)
         dce_loss = -probability.log()
         # p_loss = compute_distance(feature, closest_prototype).pow(2)
 
         # pairwise loss
-        d = compute_distance(feature, closest_prototype)
-        pw_loss = self._g(self.b - (self.tao - d))
+        pw_loss = self._g(self.b - (self.tao - compute_distance(feature, closest_prototype)))
 
         for l in all_prototypes:
             if label != l:
@@ -169,10 +168,11 @@ class GCPLLoss(nn.Module):
                 d = distances.min()
                 pw_loss += self._g(self.b + (self.tao - d))
 
-        return dce_loss + self.lambda_ * pw_loss
+        return dce_loss + self.lambda_ * pw_loss, min_distance
 
     def assign_prototype(self, feature, label, all_prototypes):
         closest_prototype = feature
+        min_distance = 0.0
 
         if label not in all_prototypes:
             all_prototypes[label] = Prototypes(label)
@@ -182,6 +182,7 @@ class GCPLLoss(nn.Module):
             prototypes = torch.cat(all_prototypes[label].features)
             distances = compute_multi_distance(feature, prototypes)
             min_distance, closest_prototype_index = distances.min(dim=0)
+            min_distance = min_distance.item()
 
             if min_distance < self.threshold:
                 all_prototypes[label].update(closest_prototype_index, feature)
@@ -189,7 +190,7 @@ class GCPLLoss(nn.Module):
             else:
                 all_prototypes[label].append(feature)
 
-        return closest_prototype
+        return closest_prototype, min_distance
 
     def _g(self, z):
         if z > 10:

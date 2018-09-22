@@ -70,13 +70,13 @@ def main():
             feature = feature.to(net.device)
             sgd.zero_grad()
             feature = net(feature).view(1, -1)
-            loss = gcpl(feature, label.item(), prototypes)
+            loss, min_distance = gcpl(feature, label.item(), prototypes)
             loss.backward()
             sgd.step()
 
             running_loss += loss.item()
 
-            logger.debug("[%3d, %5d] loss: %7.4f", epoch + 1, i + 1, loss.item())
+            logger.debug("[%d, %d] loss: %7.4f distance: %7.4f", epoch + 1, i + 1, loss.item(), min_distance)
 
         torch.save(net.state_dict(), models.Config.pkl_path)
 
