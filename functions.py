@@ -188,6 +188,17 @@ def compute_probability(feature, label, all_prototypes, gamma):
 #                self.lambda_ * self.pl(feature, closest_prototype)
 #
 #
+#
+# class Prototype:
+#     def __init__(self, label):
+#         self.label = label
+#         self.feature = None
+#         self.sample_count = 0
+#
+#     def update(self, feature):
+#         self.feature = feature if self.feature is None else (self.feature * self.sample_count + feature) / (self.sample_count + 1)
+#         self.sample_count += 1
+#
 # class Prototype:
 #     def __init__(self, label):
 #         self.label = label
@@ -201,22 +212,6 @@ def compute_probability(feature, label, all_prototypes, gamma):
 #             self.feature = (self.feature * self.sample_count + feature) / (self.sample_count + 1)
 #
 #         self.sample_count += 1
-
-class GCPLLoss(nn.Module):
-    def __init__(self, threshold, gamma=0.1, lambda_=0.1):
-        super(GCPLLoss, self).__init__()
-
-        self.threshold = threshold
-        self.lambda_ = lambda_
-        self.gamma = gamma
-
-    def forward(self, feature, label, all_prototypes):
-        closest_prototype = assign_prototype(tensor(feature.data), label, all_prototypes, self.threshold)
-        probability = compute_probability(feature, label, all_prototypes, gamma=self.gamma)
-        dce_loss = -probability.log()
-        p_loss = compute_distance(feature, closest_prototype).pow(2)
-
-        return dce_loss + self.lambda_ * p_loss
 
 
 class PairwiseLoss(nn.Module):
@@ -267,3 +262,4 @@ class Prototypes(object):
 
     def __len__(self):
         return len(self.prototypes)
+

@@ -1,6 +1,7 @@
 <component name="ProjectDictionaryState">
   <dictionary name="kzl">
     <words>
+      <w>asctime</w>
       <w>cifar</w>
       <w>conv</w>
       <w>cuda</w>
@@ -8,6 +9,7 @@
       <w>dataset</w>
       <w>ddml</w>
       <w>gcpl</w>
+      <w>levelname</w>
       <w>mnist</w>
       <w>optim</w>
       <w>relu</w>
