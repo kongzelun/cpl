@@ -1,4 +1,5 @@
 import os
+import argparse
 import logging
 import numpy as np
 import torch
@@ -112,9 +113,12 @@ def main():
 
         logger.info("Distance Average: %7.4f", average_distance)
         logger.info("Accuracy: %7.4f\n", correct / len(testloader))
-        gcpl.threshold = average_distance * 2
-        gcpl.tao = average_distance * 2
+        # gcpl.threshold = average_distance * 2
+        # gcpl.tao = average_distance * 2
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("--lambda", type=int, default=0.01)
     main()

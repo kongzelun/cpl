@@ -18,7 +18,7 @@ class Config:
 
     threshold = 10.0
     tao = 10.0
-    lambda_ = 0.01
+    lambda_ = 0.1
 
     # gamma * threshold ~ 1
     gamma = 0.1
