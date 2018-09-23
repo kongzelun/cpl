@@ -33,11 +33,12 @@ def main():
 
     dataset = np.loadtxt(models.Config.dataset_path, delimiter=',')
     np.random.shuffle(dataset[:5000])
+    np.random.shuffle(dataset[5000:])
 
     trainset = models.DataSet(dataset[:5000])
     trainloader = DataLoader(dataset=trainset, batch_size=1, shuffle=True, num_workers=24)
 
-    testset = models.DataSet(dataset[5000:])
+    testset = models.DataSet(dataset[5000:15000])
     testloader = DataLoader(dataset=testset, batch_size=1, shuffle=False, num_workers=2)
 
     # net = models.CNNNet(device=device)
@@ -62,7 +63,7 @@ def main():
             logger.error("Loading state from file %s failed.", models.Config.pkl_path)
 
     for epoch in range(train_epoch_number):
-        logger.info("Trainset size: %d, Epoch number: %d", len(trainset), epoch + 1)
+        logger.info("Trainset size: %d, Epoch number: %d, Threshold: %7.4f", len(trainset), epoch + 1, gcpl.threshold)
 
         prototypes.clear()
 
@@ -105,8 +106,11 @@ def main():
             logger.debug("%5d: Label: %d, Prediction: %d, Probability: %7.4f, Distance: %7.4f, Accuracy: %7.4f",
                          i + 1, label, predicted_label, probability, min_distance, correct / (i + 1))
 
-        logger.info("Distance Average: %7.4f", distance_sum / len(testloader))
+        average_distance = distance_sum / len(testloader)
+
+        logger.info("Distance Average: %7.4f", average_distance)
         logger.info("Accuracy: %7.4f\n", correct / len(testloader))
+        gcpl.threshold = average_distance * 2
 
 
 if __name__ == '__main__':

@@ -15,12 +15,12 @@ class Config:
     tensor_view = (-1, 32, 32)
     in_channels = 3
 
-    threshold = 15.0
-    tao = 5.0
+    threshold = 10.0
+    tao = 10.0
     lambda_ = 0.01
 
     # gamma * threshold ~ 1
-    gamma = 0.1
+    gamma = 0.2
 
 
 class DataSet(Dataset):
@@ -168,7 +168,7 @@ class GCPLLoss(nn.Module):
                 prototypes = torch.cat(all_prototypes[l].features)
                 distances = compute_multi_distance(feature, prototypes)
                 d = distances.min().pow(2)
-                pw_loss += self._g(self.b + (self.tao - d) * 0.125)
+                pw_loss += self._g(self.b + (self.tao - d))
 
         return dce_loss + self.lambda_ * pw_loss, min_distance
 
