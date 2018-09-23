@@ -11,7 +11,7 @@ class Config:
     # tensor_view = (-1, 28, 28)
     # in_channels = 1
     dataset_path = "data/cifar10_train.csv"
-    pkl_path = "pkl/cifar10 - 0.2.pkl"
+    pkl_path = "pkl/cifar10.pkl"
     log_path = "log.txt"
     tensor_view = (-1, 32, 32)
     in_channels = 3
