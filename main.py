@@ -65,7 +65,7 @@ def main():
             logger.error("Loading state from file %s failed.", models.Config.pkl_path)
 
     for epoch in range(train_epoch_number):
-        logger.info("Epoch number: %d", epoch + 1)
+        logger.info("\nEpoch number: %d", epoch + 1)
         logger.info("Trainset size: %d", len(trainset))
         logger.info("%7.4f %7.4f %7.4f %7.4f", gcpl.threshold, gcpl.gamma, gcpl.tao, gcpl.lambda_)
 
