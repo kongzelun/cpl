@@ -65,12 +65,15 @@ def main():
             logger.error("Loading state from file %s failed.", models.Config.pkl_path)
 
     for epoch in range(train_epoch_number):
-        logger.info("Trainset size: %d, Epoch number: %d, Threshold: %7.4f", len(trainset), epoch + 1)
-        logger.info("Threshold: %7.4f, Gamma: %7.4f, Tao: %7.4f, Lambda: %7.4f", gcpl.threshold, gcpl.gamma, gcpl.tao, gcpl.lambda_)
+        logger.info("Epoch number: %d", epoch + 1)
+        logger.info("Trainset size: %d", len(trainset))
+        logger.info("%7.4f %7.4f %7.4f %7.4f", gcpl.threshold, gcpl.gamma, gcpl.tao, gcpl.lambda_)
 
+        # train
         prototypes.clear()
 
         running_loss = 0.0
+        distance_sum = 0.0
 
         for i, (feature, label) in enumerate(trainloader):
             feature = feature.to(net.device)
@@ -81,11 +84,20 @@ def main():
             sgd.step()
 
             running_loss += loss.item()
+            distance_sum += min_distance
 
             logger.debug("[%d, %d] %7.4f, %7.4f", epoch + 1, i + 1, loss.item(), min_distance)
 
         torch.save(net.state_dict(), models.Config.pkl_path)
 
+        average_distance = distance_sum / len(testloader)
+
+        gcpl.threshold = average_distance * 2
+        gcpl.tao = average_distance * 2
+
+        logger.info("Distance Average: %7.4f", average_distance)
+
+        # count prototypes
         prototype_count = 0
 
         for c in prototypes:
@@ -93,30 +105,23 @@ def main():
 
         logger.info("Prototypes Count: %d", prototype_count)
 
-        # if (epoch + 1) % 5 == 0:
-        logger.info("Testset size: %d", len(testset))
+        # test
+        if (epoch + 1) % 10 == 0:
+            logger.info("Testset size: %d", len(testset))
 
-        distance_sum = 0.0
-        correct = 0
+            correct = 0
 
-        for i, (feature, label) in enumerate(testloader):
-            feature = net(feature.to(net.device)).view(1, -1)
-            predicted_label, probability, min_distance = models.predict(feature, prototypes)
+            for i, (feature, label) in enumerate(testloader):
+                feature = net(feature.to(net.device)).view(1, -1)
+                predicted_label, probability, min_distance = models.predict(feature, prototypes)
 
-            if label == predicted_label:
-                correct += 1
+                if label == predicted_label:
+                    correct += 1
 
-            distance_sum += min_distance
+                logger.debug("%5d: %d, %d, %7.4f, %7.4f, %7.4f",
+                             i + 1, label, predicted_label, probability, min_distance, correct / (i + 1))
 
-            logger.debug("%5d: %d, %d, %7.4f, %7.4f, %7.4f",
-                         i + 1, label, predicted_label, probability, min_distance, correct / (i + 1))
-
-        average_distance = distance_sum / len(testloader)
-
-        logger.info("Distance Average: %7.4f", average_distance)
-        logger.info("Accuracy: %7.4f\n", correct / len(testloader))
-        gcpl.threshold = average_distance * 2
-        gcpl.tao = average_distance * 2
+            logger.info("Accuracy: %7.4f\n", correct / len(testloader))
 
 
 if __name__ == '__main__':
