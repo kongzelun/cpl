@@ -25,7 +25,7 @@ def setup_logger(level=logging.DEBUG, filename=None):
 
 
 def main():
-    logger = setup_logger(level=logging.DEBUG, filename='log.txt')
+    logger = setup_logger(level=logging.DEBUG, filename=models.Config.log_path)
 
     train_epoch_number = 100
 
@@ -91,6 +91,8 @@ def main():
         logger.info("Prototypes Count: %d", prototype_count)
 
         # if (epoch + 1) % 5 == 0:
+        logger.info("Testset size: %d", len(testset))
+
         distance_sum = 0.0
         correct = 0
 
