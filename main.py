@@ -12,7 +12,7 @@ def setup_logger(level=logging.DEBUG, filename=None):
     logger.setLevel(level)
     handler = logging.StreamHandler()
     handler.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(asctime)s %(levelname)s: %(message)s')
+    formatter = logging.Formatter('%(asctime)s: %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
