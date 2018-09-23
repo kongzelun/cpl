@@ -20,6 +20,7 @@ def setup_logger(level=logging.DEBUG, filename=None):
     if filename is not None:
         file_handler = logging.FileHandler(filename=filename, mode='a')
         file_handler.setLevel(logging.INFO)
+        file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
 
     return logger
@@ -39,7 +40,7 @@ def main():
     trainset = models.DataSet(dataset[:5000])
     trainloader = DataLoader(dataset=trainset, batch_size=1, shuffle=True, num_workers=24)
 
-    testset = models.DataSet(dataset[5000:15000])
+    testset = models.DataSet(dataset[5000:])
     testloader = DataLoader(dataset=testset, batch_size=1, shuffle=False, num_workers=2)
 
     # net = models.CNNNet(device=device)
@@ -64,7 +65,8 @@ def main():
             logger.error("Loading state from file %s failed.", models.Config.pkl_path)
 
     for epoch in range(train_epoch_number):
-        logger.info("Trainset size: %d, Epoch number: %d, Threshold: %7.4f", len(trainset), epoch + 1, gcpl.threshold)
+        logger.info("Trainset size: %d, Epoch number: %d, Threshold: %7.4f", len(trainset), epoch + 1)
+        logger.info("Threshold: %7.4f, Gamma: %7.4f, Tao: %7.4f, Lambda: %7.4f", gcpl.threshold, gcpl.gamma, gcpl.tao, gcpl.lambda_)
 
         prototypes.clear()
 
@@ -113,12 +115,12 @@ def main():
 
         logger.info("Distance Average: %7.4f", average_distance)
         logger.info("Accuracy: %7.4f\n", correct / len(testloader))
-        # gcpl.threshold = average_distance * 2
-        # gcpl.tao = average_distance * 2
+        gcpl.threshold = average_distance * 2
+        gcpl.tao = average_distance * 2
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument("--lambda", type=int, default=0.01)
+    # parser = argparse.ArgumentParser()
+    #
+    # parser.add_argument("--lambda", type=int, default=0.01)
     main()

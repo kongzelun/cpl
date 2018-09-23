@@ -11,17 +11,17 @@ class Config:
     # tensor_view = (-1, 28, 28)
     # in_channels = 1
     dataset_path = "data/cifar10_train.csv"
-    pkl_path = "pkl/cifar10 - home.pkl"
-    log_path = "log - home.txt"
+    pkl_path = "pkl/cifar10.pkl"
+    log_path = "log.txt"
     tensor_view = (-1, 32, 32)
     in_channels = 3
 
     threshold = 10.0
     tao = 10.0
-    lambda_ = 0.1
+    lambda_ = 0.01
 
-    # gamma * threshold ~ 1
-    gamma = 0.1
+    # gamma * threshold ~ 2
+    gamma = 0.2
 
 
 class DataSet(Dataset):
