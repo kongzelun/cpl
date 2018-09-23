@@ -90,7 +90,7 @@ def main():
 
         torch.save(net.state_dict(), models.Config.pkl_path)
 
-        average_distance = distance_sum / len(testloader)
+        average_distance = distance_sum / len(trainloader)
 
         gcpl.threshold = average_distance * 2
         gcpl.tao = average_distance * 2
