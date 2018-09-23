@@ -79,7 +79,7 @@ def main():
 
             running_loss += loss.item()
 
-            logger.debug("[%d, %d] loss: %7.4f distance: %7.4f", epoch + 1, i + 1, loss.item(), min_distance)
+            logger.debug("[%d, %d] %7.4f, %7.4f", epoch + 1, i + 1, loss.item(), min_distance)
 
         torch.save(net.state_dict(), models.Config.pkl_path)
 
@@ -103,7 +103,7 @@ def main():
 
             distance_sum += min_distance
 
-            logger.debug("%5d: Label: %d, Prediction: %d, Probability: %7.4f, Distance: %7.4f, Accuracy: %7.4f",
+            logger.debug("%5d: %d, %d, %7.4f, %7.4f, %7.4f",
                          i + 1, label, predicted_label, probability, min_distance, correct / (i + 1))
 
         average_distance = distance_sum / len(testloader)
@@ -111,6 +111,7 @@ def main():
         logger.info("Distance Average: %7.4f", average_distance)
         logger.info("Accuracy: %7.4f\n", correct / len(testloader))
         gcpl.threshold = average_distance * 2
+        gcpl.tao = average_distance * 2
 
 
 if __name__ == '__main__':
