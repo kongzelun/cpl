@@ -10,9 +10,10 @@ class Config:
     # pkl_path = "pkl/fashion-mnist.pkl"
     # tensor_view = (-1, 28, 28)
     # in_channels = 1
-    dataset_path = "data/cifar10_train.csv"
-    pkl_path = "pkl/cifar10.pkl"
-    log_path = "log.txt"
+    # dataset_path = "data/cifar10_train.csv"
+    dataset_path = "data/cifar-10-sample-test.csv"
+    pkl_path = "pkl/cifar10-10-sample-test.pkl"
+    log_path = "log-sample-test.txt"
     tensor_view = (-1, 32, 32)
     in_channels = 3
 
