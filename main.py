@@ -102,14 +102,14 @@ def train(config):
         logger.info("Prototypes Count: %d", prototype_count)
 
         # test
-        if (epoch + 1) % 10 == 0:
+        if (epoch + 1) % config.test_frequency == 0:
             logger.info("Testset size: %d", len(testset))
 
             correct = 0
 
             for i, (feature, label) in enumerate(testloader):
                 feature = net(feature.to(net.device)).view(1, -1)
-                predicted_label, probability, min_distance = models.predict(feature, prototypes)
+                predicted_label, probability, min_distance = gcpl.predict(feature, prototypes)
 
                 if label == predicted_label:
                     correct += 1

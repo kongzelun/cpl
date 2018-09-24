@@ -14,5 +14,6 @@
   "tao": 10.0,
   "lambda_": 0.01,
   "train_test_split": 5000,
-  "epoch_number": 100
+  "epoch_number": 1,
+  "test_frequency": 1
 }
