@@ -1,5 +1,6 @@
 import os
 import argparse
+import json
 import logging
 import numpy as np
 import torch
@@ -23,24 +24,20 @@ def setup_logger(level=logging.DEBUG, filename=None):
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
 
-    return logger
 
-
-def main():
-    logger = setup_logger(level=logging.DEBUG, filename=models.Config.log_path)
-
-    train_epoch_number = 100
+def train(train_epoch_number, train_test_split):
+    logger = logging.getLogger(__name__)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     dataset = np.loadtxt(models.Config.dataset_path, delimiter=',')
-    np.random.shuffle(dataset[:5000])
-    np.random.shuffle(dataset[5000:])
+    np.random.shuffle(dataset[:train_test_split])
+    np.random.shuffle(dataset[train_test_split:])
 
-    trainset = models.DataSet(dataset[:5000])
+    trainset = models.DataSet(dataset[:train_test_split])
     trainloader = DataLoader(dataset=trainset, batch_size=1, shuffle=True, num_workers=24)
 
-    testset = models.DataSet(dataset[5000:])
+    testset = models.DataSet(dataset[train_test_split:])
     testloader = DataLoader(dataset=testset, batch_size=1, shuffle=False, num_workers=2)
 
     # net = models.CNNNet(device=device)
@@ -52,9 +49,6 @@ def main():
     # cel = torch.nn.CrossEntropyLoss()
     gcpl = models.GCPLLoss(threshold=models.Config.threshold, gamma=models.Config.gamma, tao=models.Config.tao, b=1.0, beta=0.5, lambda_=models.Config.lambda_)
     sgd = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
-
-    if not os.path.exists("pkl"):
-        os.mkdir("pkl")
 
     if os.path.exists(models.Config.pkl_path):
         state_dict = torch.load(models.Config.pkl_path)
@@ -124,8 +118,32 @@ def main():
             logger.info("Accuracy: %7.4f\n", correct / len(testloader))
 
 
+def main():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('-c', '--config', type=str, help="Config file path.")
+    parser.add_argument('-e', '--epoch', type=int, help="Train epoch number.", default=1)
+
+    args = parser.parse_args()
+
+    setup_logger(level=logging.DEBUG, filename=models.Config.log_path)
+
+    if not os.path.exists("pkl"):
+        os.mkdir("pkl")
+
+    if not os.path.exists("config"):
+        os.mkdir("config")
+
+    # if os.path.exists("config/{}".format(args.config)):
+    try:
+        with open("config/{}".format(args.config)) as config:
+            config = json.load(config)
+            print(**config)
+    except FileNotFoundError:
+        print("Can't find config file.")
+    finally:
+        pass
+
+
 if __name__ == '__main__':
-    # parser = argparse.ArgumentParser()
-    #
-    # parser.add_argument("", type=int, default=0.01)
     main()

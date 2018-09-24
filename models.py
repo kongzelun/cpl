@@ -11,11 +11,11 @@ class Config:
     # tensor_view = (-1, 28, 28)
     # in_channels = 1
     # dataset_path = "data/cifar10_train.csv"
-    dataset_path = "data/cifar-10-sample-test.csv"
-    pkl_path = "pkl/cifar10-10-sample-test.pkl"
-    log_path = "log-sample-test.txt"
-    tensor_view = (-1, 32, 32)
-    in_channels = 3
+    dataset_path = None
+    pkl_path = None
+    log_path = None
+    tensor_view = None
+    in_channels = None
 
     threshold = 10.0
     tao = 10.0
