@@ -5,7 +5,7 @@ from torch.utils.data import Dataset
 import dense_net
 
 
-class Config:
+class Config(object):
     # dataset_path = 'data/fashion-mnist_train.csv'
     # pkl_path = "pkl/fashion-mnist.pkl"
     # tensor_view = (-1, 28, 28)
@@ -17,20 +17,29 @@ class Config:
     tensor_view = None
     in_channels = None
 
-    threshold = 10.0
-    tao = 10.0
-    lambda_ = 0.01
+    learning_rate = None
+    threshold = None
+    gamma = None
+    tao = None
+    lambda_ = None
 
-    # gamma * threshold ~ 2
-    gamma = 0.2
+    epoch_number = 1
+    train_test_split = 5000
+
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+        self.values = kwargs
+
+    def __repr__(self):
+        return "{}".format(self.values)
 
 
 class DataSet(Dataset):
-    def __init__(self, dataset):
+    def __init__(self, dataset, tensor_view):
         self.data = []
 
         for s in dataset:
-            x = (tensor(s[:-1], dtype=torch.float) / 255).view(*Config.tensor_view)
+            x = (tensor(s[:-1], dtype=torch.float) / 255).view(tensor_view)
             y = tensor(s[-1], dtype=torch.long)
             self.data.append((x, y))
 
@@ -42,11 +51,11 @@ class DataSet(Dataset):
 
 
 class CNNNet(nn.Module):
-    def __init__(self, device):
+    def __init__(self, device, in_channels):
         super(CNNNet, self).__init__()
 
         self.conv1 = nn.Sequential(
-            nn.Conv2d(in_channels=Config.in_channels, out_channels=10, kernel_size=5, padding=2),
+            nn.Conv2d(in_channels=in_channels, out_channels=10, kernel_size=5, padding=2),
             nn.ReLU(),
             nn.MaxPool2d(2, 2)
         )
@@ -66,7 +75,7 @@ class CNNNet(nn.Module):
 
 
 class DenseNet(nn.Module):
-    def __init__(self, device, number_layers=6, growth_rate=12, reduction=2, bottleneck=True, drop_rate=0.0):
+    def __init__(self, device, in_channels, number_layers=6, growth_rate=12, reduction=2, bottleneck=True, drop_rate=0.0):
         super(DenseNet, self).__init__()
 
         channels = 2 * growth_rate
@@ -77,7 +86,7 @@ class DenseNet(nn.Module):
             block = dense_net.BasicBlock
 
         # 1st conv before any dense block
-        self.conv1 = nn.Conv2d(in_channels=Config.in_channels, out_channels=channels, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv1 = nn.Conv2d(in_channels=in_channels, out_channels=channels, kernel_size=3, stride=1, padding=1, bias=False)
 
         # 1st block
         self.block1 = dense_net.DenseBlock(number_layers, channels, block, growth_rate, drop_rate)
@@ -100,8 +109,8 @@ class DenseNet(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.pooling = nn.AvgPool2d(kernel_size=2)
 
-        self.fc1 = nn.Linear(channels * 4 * 4, 1000)
-        self.fc2 = nn.Linear(1000, 300)
+        # self.fc1 = nn.Linear(channels * 4 * 4, 1000)
+        # self.fc2 = nn.Linear(1000, 300)
 
         self.channels = channels
 
@@ -115,8 +124,8 @@ class DenseNet(nn.Module):
         out = self.block3(out)
         out = self.relu(self.bn1(out))
         out = self.pooling(out)
-        out = self.fc1(out.view(1, -1))
-        out = self.fc2(out)
+        # out = self.fc1(out.view(1, -1))
+        # out = self.fc2(out)
         return out
 
 
@@ -207,7 +216,7 @@ compute_distance = nn.PairwiseDistance(p=2, eps=1e-6)
 compute_multi_distance = nn.PairwiseDistance(p=2, eps=1e-6, keepdim=True)
 
 
-def compute_probability(feature, label, all_prototypes, gamma=Config.gamma):
+def compute_probability(feature, label, all_prototypes, gamma):
     one = 0.0
     probability = None
 

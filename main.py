@@ -25,40 +25,42 @@ def setup_logger(level=logging.DEBUG, filename=None):
         logger.addHandler(file_handler)
 
 
-def train(train_epoch_number, train_test_split):
+def train(config):
     logger = logging.getLogger(__name__)
+
+    logger.info("%s", config)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    dataset = np.loadtxt(models.Config.dataset_path, delimiter=',')
-    np.random.shuffle(dataset[:train_test_split])
-    np.random.shuffle(dataset[train_test_split:])
+    dataset = np.loadtxt(config.dataset_path, delimiter=',')
+    np.random.shuffle(dataset[:config.train_test_split])
+    np.random.shuffle(dataset[config.train_test_split:])
 
-    trainset = models.DataSet(dataset[:train_test_split])
+    trainset = models.DataSet(dataset[:config.train_test_split], config.tensor_view)
     trainloader = DataLoader(dataset=trainset, batch_size=1, shuffle=True, num_workers=24)
 
-    testset = models.DataSet(dataset[train_test_split:])
+    testset = models.DataSet(dataset[config.train_test_split:], config.tensor_view)
     testloader = DataLoader(dataset=testset, batch_size=1, shuffle=False, num_workers=2)
 
     # net = models.CNNNet(device=device)
-    net = models.DenseNet(device=device, number_layers=8, growth_rate=12, drop_rate=0.0)
+    net = models.DenseNet(device=device, in_channels=config.in_channels, number_layers=8, growth_rate=12, drop_rate=0.0)
     logger.info("DenseNet Channels: %d", net.channels)
 
     prototypes = {}
 
     # cel = torch.nn.CrossEntropyLoss()
-    gcpl = models.GCPLLoss(threshold=models.Config.threshold, gamma=models.Config.gamma, tao=models.Config.tao, b=1.0, beta=0.5, lambda_=models.Config.lambda_)
-    sgd = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+    gcpl = models.GCPLLoss(threshold=config.threshold, gamma=config.gamma, tao=config.tao, b=1.0, beta=0.5, lambda_=config.lambda_)
+    sgd = optim.SGD(net.parameters(), lr=config.learning_rate, momentum=0.9)
 
-    if os.path.exists(models.Config.pkl_path):
-        state_dict = torch.load(models.Config.pkl_path)
+    if os.path.exists(config.pkl_path):
+        state_dict = torch.load(config.pkl_path)
         try:
             net.load_state_dict(state_dict)
-            logger.info("Load state from file %s.", models.Config.pkl_path)
+            logger.info("Load state from file %s.", config.pkl_path)
         except RuntimeError:
-            logger.error("Loading state from file %s failed.", models.Config.pkl_path)
+            logger.error("Loading state from file %s failed.", config.pkl_path)
 
-    for epoch in range(train_epoch_number):
+    for epoch in range(config.epoch_number):
         logger.info("\nEpoch number: %d", epoch + 1)
         logger.info("Trainset size: %d", len(trainset))
         logger.info("%7.4f %7.4f %7.4f %7.4f", gcpl.threshold, gcpl.gamma, gcpl.tao, gcpl.lambda_)
@@ -82,7 +84,7 @@ def train(train_epoch_number, train_test_split):
 
             logger.debug("[%d, %d] %7.4f, %7.4f", epoch + 1, i + 1, loss.item(), min_distance)
 
-        torch.save(net.state_dict(), models.Config.pkl_path)
+        torch.save(net.state_dict(), config.pkl_path)
 
         average_distance = distance_sum / len(trainloader)
 
@@ -126,23 +128,25 @@ def main():
 
     args = parser.parse_args()
 
-    setup_logger(level=logging.DEBUG, filename=models.Config.log_path)
-
     if not os.path.exists("pkl"):
         os.mkdir("pkl")
 
     if not os.path.exists("config"):
         os.mkdir("config")
 
-    # if os.path.exists("config/{}".format(args.config)):
-    try:
-        with open("config/{}".format(args.config)) as config:
-            config = json.load(config)
-            print(**config)
-    except FileNotFoundError:
-        print("Can't find config file.")
-    finally:
-        pass
+    with open("config/{}".format(args.config)) as config_file:
+        config = models.Config(**json.load(config_file))
+
+    # try:
+    #     config_file = open("config/{}".format(args.config))
+    #     config = models.Config(**json.load(config_file))
+    # except FileNotFoundError:
+    #     print("Can't find config file.")
+    # finally:
+    #     config_file.close()
+
+    setup_logger(level=logging.DEBUG, filename=config.log_path)
+    train(config)
 
 
 if __name__ == '__main__':
