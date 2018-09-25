@@ -37,7 +37,7 @@ def train(config):
     np.random.shuffle(dataset[config.train_test_split:])
 
     trainset = models.DataSet(dataset[:config.train_test_split], config.tensor_view)
-    trainloader = DataLoader(dataset=trainset, batch_size=1, shuffle=True, num_workers=24)
+    trainloader = DataLoader(dataset=trainset, batch_size=1, shuffle=True, num_workers=2)
 
     testset = models.DataSet(dataset[config.train_test_split:], config.tensor_view)
     testloader = DataLoader(dataset=testset, batch_size=1, shuffle=False, num_workers=2)
