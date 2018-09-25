@@ -123,8 +123,8 @@ def train(config):
 def main():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('-c', '--config', type=str, help="Config file path.")
-    parser.add_argument('-e', '--epoch', type=int, help="Train epoch number.", default=1)
+    parser.add_argument('-c', '--config', type=str, help="Config file path.", required=True)
+    parser.add_argument('-e', '--epoch', type=int, help="Train epoch number.", default=None)
 
     args = parser.parse_args()
 
@@ -136,6 +136,9 @@ def main():
 
     with open("config/{}".format(args.config)) as config_file:
         config = models.Config(**json.load(config_file))
+
+    if args.epoch:
+        config.epoch_number = args.epoch
 
     # try:
     #     config_file = open("config/{}".format(args.config))
