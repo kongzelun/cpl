@@ -88,8 +88,8 @@ def train(config):
 
         average_distance = distance_sum / len(trainloader)
 
-        gcpl.threshold = average_distance * 2
-        gcpl.tao = average_distance * 2
+        # gcpl.threshold = average_distance * 2
+        # gcpl.tao = average_distance * 2
 
         logger.info("Distance Average: %7.4f", average_distance)
 
