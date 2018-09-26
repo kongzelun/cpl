@@ -150,6 +150,7 @@ class Prototypes(object):
 
     def clear(self):
         self.features.clear()
+        self.label_set.clear()
 
     def get_prototypes(self, label):
         return [p for p in self.features if p.label == label]

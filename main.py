@@ -37,7 +37,7 @@ def train(config):
     np.random.shuffle(dataset[config.train_test_split:])
 
     trainset = models.DataSet(dataset[:config.train_test_split], config.tensor_view)
-    trainloader = DataLoader(dataset=trainset, batch_size=1, shuffle=True, num_workers=2)
+    trainloader = DataLoader(dataset=trainset, batch_size=1, shuffle=True, num_workers=4)
 
     testset = models.DataSet(dataset[config.train_test_split:], config.tensor_view)
     testloader = DataLoader(dataset=testset, batch_size=1, shuffle=False, num_workers=2)
@@ -93,13 +93,7 @@ def train(config):
 
         logger.info("Distance Average: %7.4f", average_distance)
 
-        # count prototypes
-        prototype_count = 0
-
-        for c in prototypes:
-            prototype_count += len(prototypes[c])
-
-        logger.info("Prototypes Count: %d", prototype_count)
+        logger.info("Prototypes Count: %d", len(prototypes))
 
         # test
         if (epoch + 1) % config.test_frequency == 0:
