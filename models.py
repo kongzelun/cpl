@@ -21,6 +21,7 @@ class Config(object):
     threshold = None
     gamma = None
     tao = None
+    b = None
     lambda_ = None
 
     epoch_number = 1
@@ -131,18 +132,27 @@ class DenseNet(nn.Module):
 
 
 class Prototypes(object):
-    def __init__(self, label):
-        self.label = label
-        self.sample_count = []
+    def __init__(self):
         self.features = []
+        self.label_set = set()
 
-    def append(self, feature):
+    def append(self, feature, label):
+        setattr(feature, 'label', label)
+        setattr(feature, 'sample_count', 1)
         self.features.append(feature)
-        self.sample_count.append(1)
+        self.label_set.add(label)
 
-    def update(self, index, feature):
-        self[index] = (self.features[index] * self.sample_count[index] + feature) / (self.sample_count[index] + 1)
-        self.sample_count[index] += 1
+    @staticmethod
+    def update(prototype, feature):
+        count = prototype.sample_count
+        prototype = (prototype * count + feature) / (count + 1)
+        prototype.sample_count = count + 1
+
+    def clear(self):
+        self.features.clear()
+
+    def get_prototypes(self, label):
+        return [p for p in self.features if p.label == label]
 
     def __getitem__(self, item):
         return self.features[item]
@@ -166,6 +176,7 @@ class GCPLLoss(nn.Module):
         self.beta = beta
         self.compute_distance = nn.PairwiseDistance(p=2, eps=1e-6)
         self.compute_multi_distance = nn.PairwiseDistance(p=2, eps=1e-6, keepdim=True)
+        self.softmax = nn.Softmax(dim=1)
 
     def forward(self, feature, label, all_prototypes):
         closest_prototype, min_distance = self.assign_prototype(feature.data, label, all_prototypes)
@@ -175,36 +186,36 @@ class GCPLLoss(nn.Module):
         # p_loss = compute_distance(feature, closest_prototype).pow(2)
 
         # pairwise loss
-        pw_loss = self._g(self.b - (self.tao - self.compute_distance(feature, closest_prototype).pow(2)))
+        pw_loss = []
+        for p in all_prototypes:
+            if p.label == label:
+                pw_loss.append(self._g(self.b - (self.tao - self.compute_distance(feature, closest_prototype).pow(2))))
+            else:
+                distance = self.compute_distance(feature, p)
+                pw_loss.append(self._g(self.b + (self.tao - distance)))
 
-        for l in all_prototypes:
-            if label != l:
-                prototypes = torch.cat(all_prototypes[l].features)
-                distances = self.compute_multi_distance(feature, prototypes)
-                d = distances.min().pow(2)
-                pw_loss += self._g(self.b + (self.tao - d))
+        pw_loss = torch.cat(pw_loss).sum()
 
         return dce_loss + self.lambda_ * pw_loss, min_distance
 
-    def assign_prototype(self, feature, label, all_prototypes):
+    def assign_prototype(self, feature, label, all_prototypes: Prototypes):
         closest_prototype = feature
         min_distance = 0.0
 
-        if label not in all_prototypes:
-            all_prototypes[label] = Prototypes(label)
-            all_prototypes[label].append(feature)
+        if label not in all_prototypes.label_set:
+            all_prototypes.append(feature, label)
         else:
             # find closest prototype from prototypes in corresponding class
-            prototypes = torch.cat(all_prototypes[label].features)
-            distances = self.compute_multi_distance(feature, prototypes)
+            prototypes = all_prototypes.get_prototypes(label)
+            distances = self.compute_multi_distance(feature, torch.cat(prototypes))
             min_distance, closest_prototype_index = distances.min(dim=0)
             min_distance = min_distance.item()
 
             if min_distance < self.threshold:
-                all_prototypes[label].update(closest_prototype_index, feature)
-                closest_prototype = all_prototypes[label][closest_prototype_index]
+                Prototypes.update(prototypes[closest_prototype_index], feature)
+                closest_prototype = prototypes[closest_prototype_index]
             else:
-                all_prototypes[label].append(feature)
+                all_prototypes.append(feature, label)
 
         return closest_prototype, min_distance
 
@@ -215,36 +226,19 @@ class GCPLLoss(nn.Module):
             return (1 + (self.beta * z).exp()).log() / self.beta
 
     def compute_probability(self, feature, label, all_prototypes):
-        one = 0.0
-        probability = None
+        distances = self.compute_multi_distance(feature, torch.cat(all_prototypes.features))
+        probabilities = self.softmax(distances)
 
-        for l in all_prototypes:
-            prototypes = torch.cat(all_prototypes[l].features)
-            distances = self.compute_multi_distance(feature, prototypes)
-            one += (-self.gamma * distances.pow(2)).exp().sum()
-
-            if label == l:
-                probability = (-self.gamma * distances.pow(2)).exp().sum()
-
-        if one.item() > 0.0:
-            probability /= one
+        probability = torch.cat([probabilities[i] for i in range(len(all_prototypes)) if all_prototypes[i].label == label]).sum()
 
         return probability
 
     def find_closest_prototype(self, feature, all_prototypes):
         # find closest prototype from all prototypes
-        min_distance = None
-        label = None
+        distances = self.compute_multi_distance(feature, torch.cat(all_prototypes.features))
+        min_distance, index = distances.min()
 
-        for l in all_prototypes:
-            prototypes = torch.cat(all_prototypes[l].features)
-            distances = self.compute_multi_distance(feature, prototypes)
-            d = distances.min().item()
-            if min_distance is None or d < min_distance:
-                min_distance = d
-                label = l
-
-        return label, min_distance
+        return all_prototypes[index].label, min_distance.item()
 
     def predict(self, feature, all_prototypes):
         predicted_label, min_distance = self.find_closest_prototype(feature, all_prototypes)

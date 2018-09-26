@@ -46,7 +46,7 @@ def train(config):
     net = models.DenseNet(device=device, in_channels=config.in_channels, number_layers=8, growth_rate=12, drop_rate=0.0)
     logger.info("DenseNet Channels: %d", net.channels)
 
-    prototypes = {}
+    prototypes = models.Prototypes()
 
     # cel = torch.nn.CrossEntropyLoss()
     gcpl = models.GCPLLoss(threshold=config.threshold, gamma=config.gamma, tao=config.tao, b=1.0, beta=0.5, lambda_=config.lambda_)
@@ -134,7 +134,7 @@ def main():
     if not os.path.exists("config"):
         os.mkdir("config")
 
-    with open("config/{}".format(args.config)) as config_file:
+    with open("config/{}.json".format(args.config)) as config_file:
         config = models.Config(**json.load(config_file))
 
     if args.epoch:
