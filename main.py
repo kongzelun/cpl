@@ -114,7 +114,7 @@ def train(config):
                 if label == predicted_label:
                     correct += 1
 
-                logger.debug("%5d: %d, %d, %7.4f, %7.4f, %7.4f",
+                logger.info("%5d: %d, %d, %7.4f, %7.4f, %7.4f",
                              i + 1, label, predicted_label, probability, min_distance, correct / (i + 1))
 
             logger.info("Accuracy: %7.4f\n", correct / len(testloader))
