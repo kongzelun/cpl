@@ -176,7 +176,7 @@ class GCPLLoss(nn.Module):
         self.beta = beta
         self.compute_distance = nn.PairwiseDistance(p=2, eps=1e-6)
         self.compute_multi_distance = nn.PairwiseDistance(p=2, eps=1e-6, keepdim=True)
-        self.softmax = nn.Softmax(dim=1)
+        self.softmax = nn.Softmax(dim=0)
 
     def forward(self, feature, label, all_prototypes):
         closest_prototype, min_distance = self.assign_prototype(feature.data, label, all_prototypes)
@@ -227,7 +227,7 @@ class GCPLLoss(nn.Module):
 
     def compute_probability(self, feature, label, all_prototypes):
         distances = self.compute_multi_distance(feature, torch.cat(all_prototypes.features))
-        probabilities = self.softmax(distances)
+        probabilities = self.softmax(-self.gamma * distances.pow(2))
 
         probability = torch.cat([probabilities[i] for i in range(len(all_prototypes)) if all_prototypes[i].label == label]).sum()
 
