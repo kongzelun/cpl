@@ -7,6 +7,7 @@ import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import models
+from sklearn.metrics import confusion_matrix
 
 
 def setup_logger(level=logging.DEBUG, filename=None):
@@ -40,7 +41,7 @@ def train(config):
     trainloader = DataLoader(dataset=trainset, batch_size=1, shuffle=True, num_workers=4)
 
     testset = models.DataSet(dataset[config.train_test_split:], config.tensor_view)
-    testloader = DataLoader(dataset=testset, batch_size=1, shuffle=False, num_workers=2)
+    testloader = DataLoader(dataset=testset, batch_size=1, shuffle=False, num_workers=0)
 
     # net = models.CNNNet(device=device)
     net = models.DenseNet(device=device, in_channels=config.in_channels, number_layers=8, growth_rate=12, drop_rate=0.0)
@@ -61,7 +62,7 @@ def train(config):
             logger.error("Loading state from file %s failed.", config.pkl_path)
 
     for epoch in range(config.epoch_number):
-        logger.info("\nEpoch number: %d", epoch + 1)
+        logger.info("Epoch number: %d", epoch + 1)
         logger.info("Trainset size: %d", len(trainset))
         logger.info("%7.4f %7.4f %7.4f %7.4f", gcpl.threshold, gcpl.gamma, gcpl.tao, gcpl.lambda_)
 
@@ -100,18 +101,28 @@ def train(config):
             logger.info("Testset size: %d", len(testset))
 
             correct = 0
+            labels_true = []
+            labels_predicted = []
+            min_distances = []
 
-            for i, (feature, label) in enumerate(testloader):
+            for j, (feature, label) in enumerate(testloader):
                 feature = net(feature.to(net.device)).view(1, -1)
                 predicted_label, probability, min_distance = gcpl.predict(feature, prototypes)
+
+                labels_true.append(label)
+                labels_predicted.append(predicted_label)
+                min_distances.append(min_distance)
 
                 if label == predicted_label:
                     correct += 1
 
-                logger.info("%5d: %d, %d, %7.4f, %7.4f, %7.4f",
-                             i + 1, label, predicted_label, probability, min_distance, correct / (i + 1))
+                logger.info("%5d: %d, %d, %7.4f, %7.4f",
+                            j + 1, label, predicted_label, probability, min_distance)
 
-            logger.info("Accuracy: %7.4f\n", correct / len(testloader))
+            cm = confusion_matrix(labels_true, labels_predicted, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+
+            logger.info("Accuracy: %7.4f", correct / len(testloader))
+            logger.info("Confusion Matrix: \n%s\n", cm)
 
 
 def main():
