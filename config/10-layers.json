@@ -1,14 +1,14 @@
 {
   "dataset_path": "data/cifar10_sample-test.csv",
-  "pkl_path": "pkl/test.pkl",
-  "log_path": "log-test.txt",
+  "pkl_path": "pkl/10-layers.pkl",
+  "log_path": "log-10-layers.txt",
   "tensor_view": [
     -1,
     32,
     32
   ],
   "in_channels": 3,
-  "layers": 6,
+  "layers": 10,
   "learning_rate": 0.001,
   "threshold": 10.0,
   "gamma": 0.5,
@@ -16,6 +16,6 @@
   "b": 2.5,
   "lambda_": 0.1,
   "train_test_split": 6000,
-  "epoch_number": 1,
-  "test_frequency": 1
+  "epoch_number": 100,
+  "test_frequency": 5
 }
