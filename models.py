@@ -112,9 +112,6 @@ class DenseNet(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.pooling = nn.AvgPool2d(kernel_size=2)
 
-        # self.fc1 = nn.Linear(channels * 4 * 4, 1000)
-        # self.fc2 = nn.Linear(1000, 300)
-
         self.channels = channels
 
         self.device = device
@@ -127,8 +124,6 @@ class DenseNet(nn.Module):
         out = self.block3(out)
         out = self.relu(self.bn1(out))
         out = self.pooling(out)
-        # out = self.fc1(out.view(1, -1))
-        # out = self.fc2(out)
         return out
 
 
