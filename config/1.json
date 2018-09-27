@@ -13,7 +13,7 @@
   "gamma": 0.5,
   "tao": 10.0,
   "b": 2.5,
-  "lambda_": 0.01,
+  "lambda_": 0.1,
   "train_test_split": 6000,
   "epoch_number": 100,
   "test_frequency": 5

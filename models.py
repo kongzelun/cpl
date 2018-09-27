@@ -184,25 +184,26 @@ class GCPLLoss(nn.Module):
         self.log_softmax = nn.LogSoftmax()
 
     def forward(self, feature, label, all_prototypes):
-        min_distance = self.assign_prototype(feature.data, label, all_prototypes)
+        closest_prototype, min_distance = self.assign_prototype(feature.data, label, all_prototypes)
 
         probability = self.compute_probability(feature, label, all_prototypes)
         dce_loss = -probability.log()
         # p_loss = compute_distance(feature, closest_prototype).pow(2)
 
         # pairwise loss
-        distances = self.compute_multi_distance(feature, torch.cat(all_prototypes.dict[label]))
-        pw_loss = self._g(self.b - (self.tao - distances)).sum()
+        distance = self.compute_distance(feature, closest_prototype)
+        pw_loss = self._g(self.b - (self.tao - distance))
 
         for l in all_prototypes.dict:
             if l != label:
-                distances = self.compute_multi_distance(feature, torch.cat(all_prototypes.dict[l]))
-                pw_loss += self._g(self.b + (self.tao - distances)).sum()
+                prototypes = torch.cat(all_prototypes.get(l))
+                distances = self.compute_multi_distance(feature, prototypes)
+                pw_loss += self._g(self.b + (self.tao - distances.min()))
 
         return dce_loss + self.lambda_ * pw_loss, min_distance
 
     def assign_prototype(self, feature, label, all_prototypes: Prototypes):
-        # closest_prototype = feature
+        closest_prototype = feature
         min_distance = 0.0
 
         if label not in all_prototypes.dict:
@@ -216,11 +217,11 @@ class GCPLLoss(nn.Module):
 
             if min_distance < self.threshold:
                 Prototypes.update(prototypes[closest_prototype_index], feature)
-                # closest_prototype = prototypes[closest_prototype_index]
+                closest_prototype = prototypes[closest_prototype_index]
             else:
                 all_prototypes.append(feature, label)
 
-        return min_distance
+        return closest_prototype, min_distance
 
     def _g(self, z):
         return (1 + (self.beta * z).exp()).log() / self.beta
@@ -230,7 +231,10 @@ class GCPLLoss(nn.Module):
         one = (-self.gamma * distances.pow(2)).exp().sum()
 
         distances = self.compute_multi_distance(feature, torch.cat(all_prototypes.get(label)))
-        probability = (-self.gamma * distances.pow(2)).exp().sum() / one
+        probability = (-self.gamma * distances.pow(2)).exp().sum()
+
+        if one.item() > 0.0:
+            probability /= one
 
         return probability
 
