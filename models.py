@@ -221,7 +221,7 @@ class GCPLLoss(nn.Module):
         return min_distance
 
     def _g(self, z):
-            return (1 + (self.beta * z).exp()).log() / self.beta
+        return (1 + (self.beta * z).exp()).log() / self.beta
 
     def compute_probability(self, feature, label, all_prototypes):
         distances = self.compute_multi_distance(feature, torch.cat(all_prototypes.features))
@@ -232,15 +232,12 @@ class GCPLLoss(nn.Module):
 
         return probability
 
-    def find_closest_prototype(self, feature, all_prototypes):
+    def predict(self, feature, all_prototypes):
         # find closest prototype from all prototypes
         distances = self.compute_multi_distance(feature, torch.cat(all_prototypes.features))
         min_distance, index = distances.min(dim=0)
 
-        return all_prototypes[index].label, min_distance.item()
-
-    def predict(self, feature, all_prototypes):
-        predicted_label, min_distance = self.find_closest_prototype(feature, all_prototypes)
+        predicted_label = all_prototypes[index].label
         probability = self.compute_probability(feature, predicted_label, all_prototypes)
 
         return predicted_label, probability.item(), min_distance
