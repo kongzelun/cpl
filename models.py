@@ -16,6 +16,7 @@ class Config(object):
     log_path = None
     tensor_view = None
     in_channels = None
+    layers = None
 
     learning_rate = None
     threshold = None
@@ -182,11 +183,12 @@ class GCPLLoss(nn.Module):
         self.compute_distance = nn.PairwiseDistance(p=2, eps=1e-6)
         self.compute_multi_distance = nn.PairwiseDistance(p=2, eps=1e-6, keepdim=True)
         self.log_softmax = nn.LogSoftmax()
+        self.prototypes = Prototypes()
 
-    def forward(self, feature, label, all_prototypes):
-        closest_prototype, min_distance = self.assign_prototype(feature.data, label, all_prototypes)
+    def forward(self, feature, label):
+        closest_prototype, min_distance = self.assign_prototype(feature.data, label)
 
-        probability = self.compute_probability(feature, label, all_prototypes)
+        probability = self.compute_probability(feature, label)
         dce_loss = -probability.log()
         # p_loss = compute_distance(feature, closest_prototype).pow(2)
 
@@ -194,23 +196,23 @@ class GCPLLoss(nn.Module):
         distance = self.compute_distance(feature, closest_prototype)
         pw_loss = self._g(self.b - (self.tao - distance.pow(2)))
 
-        for l in all_prototypes.dict:
+        for l in self.prototypes.dict:
             if l != label:
-                prototypes = torch.cat(all_prototypes.get(l))
+                prototypes = torch.cat(self.prototypes.get(l))
                 distance = self.compute_multi_distance(feature, prototypes).min()
                 pw_loss += self._g(self.b + (self.tao - distance.pow(2)))
 
         return dce_loss + self.lambda_ * pw_loss, min_distance
 
-    def assign_prototype(self, feature, label, all_prototypes: Prototypes):
+    def assign_prototype(self, feature, label):
         closest_prototype = feature
         min_distance = 0.0
 
-        if label not in all_prototypes.dict:
-            all_prototypes.append(feature, label)
+        if label not in self.prototypes.dict:
+            self.prototypes.append(feature, label)
         else:
             # find closest prototype from prototypes in corresponding class
-            prototypes = all_prototypes.get(label)
+            prototypes = self.prototypes.get(label)
             distances = self.compute_multi_distance(feature, torch.cat(prototypes))
             min_distance, closest_prototype_index = distances.min(dim=0)
             min_distance = min_distance.item()
@@ -219,18 +221,18 @@ class GCPLLoss(nn.Module):
                 Prototypes.update(prototypes[closest_prototype_index], feature)
                 closest_prototype = prototypes[closest_prototype_index]
             else:
-                all_prototypes.append(feature, label)
+                self.prototypes.append(feature, label)
 
         return closest_prototype, min_distance
 
     def _g(self, z):
         return (1 + (self.beta * z).exp()).log() / self.beta
 
-    def compute_probability(self, feature, label, all_prototypes):
-        distances = self.compute_multi_distance(feature, torch.cat(all_prototypes.features))
+    def compute_probability(self, feature, label):
+        distances = self.compute_multi_distance(feature, torch.cat(self.prototypes.features))
         one = (-self.gamma * distances.pow(2)).exp().sum()
 
-        distances = self.compute_multi_distance(feature, torch.cat(all_prototypes.get(label)))
+        distances = self.compute_multi_distance(feature, torch.cat(self.prototypes.get(label)))
         probability = (-self.gamma * distances.pow(2)).exp().sum()
 
         if one.item() > 0.0:
@@ -238,12 +240,15 @@ class GCPLLoss(nn.Module):
 
         return probability
 
-    def predict(self, feature, all_prototypes):
+    def predict(self, feature):
         # find closest prototype from all prototypes
-        distances = self.compute_multi_distance(feature, torch.cat(all_prototypes.features))
+        distances = self.compute_multi_distance(feature, torch.cat(self.prototypes.features))
         min_distance, index = distances.min(dim=0)
 
-        predicted_label = all_prototypes[index].label
-        probability = self.compute_probability(feature, predicted_label, all_prototypes)
+        predicted_label = self.prototypes[index].label
+        probability = self.compute_probability(feature, predicted_label)
 
         return predicted_label, probability.item(), min_distance.item()
+
+    def clear(self):
+        self.prototypes.clear()

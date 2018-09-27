@@ -1,7 +1,7 @@
 {
   "dataset_path": "data/cifar10_sample-test.csv",
-  "pkl_path": "pkl/cifar10_sample-test.pkl",
-  "log_path": "log-cifar10_sample-test.txt",
+  "pkl_path": "pkl/test.pkl",
+  "log_path": "log-test.txt",
   "tensor_view": [
     -1,
     32,
@@ -16,6 +16,6 @@
   "b": 2.5,
   "lambda_": 0.1,
   "train_test_split": 6000,
-  "epoch_number": 100,
-  "test_frequency": 5
+  "epoch_number": 1,
+  "test_frequency": 1
 }

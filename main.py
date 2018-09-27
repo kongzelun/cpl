@@ -44,10 +44,8 @@ def train(config):
     testloader = DataLoader(dataset=testset, batch_size=1, shuffle=False, num_workers=0)
 
     # net = models.CNNNet(device=device)
-    net = models.DenseNet(device=device, in_channels=config.in_channels, number_layers=6, growth_rate=12, drop_rate=0.0)
+    net = models.DenseNet(device=device, in_channels=config.in_channels, number_layers=config.layers, growth_rate=12, drop_rate=0.0)
     logger.info("DenseNet Channels: %d", net.channels)
-
-    prototypes = models.Prototypes()
 
     # cel = torch.nn.CrossEntropyLoss()
     gcpl = models.GCPLLoss(threshold=config.threshold, gamma=config.gamma, tao=config.tao, b=config.b, beta=0.5, lambda_=config.lambda_)
@@ -63,11 +61,12 @@ def train(config):
 
     for epoch in range(config.epoch_number):
         logger.info("Epoch number: %d", epoch + 1)
+
         logger.info("Trainset size: %d", len(trainset))
         logger.info("%7.4f %7.4f %7.4f %7.4f", gcpl.threshold, gcpl.gamma, gcpl.tao, gcpl.lambda_)
 
         # train
-        prototypes.clear()
+        gcpl.clear()
 
         running_loss = 0.0
         distance_sum = 0.0
@@ -76,7 +75,7 @@ def train(config):
             feature = feature.to(net.device)
             sgd.zero_grad()
             feature = net(feature).view(1, -1)
-            loss, min_distance = gcpl(feature, label.item(), prototypes)
+            loss, min_distance = gcpl(feature, label.item())
             loss.backward()
             sgd.step()
 
@@ -94,7 +93,7 @@ def train(config):
 
         logger.info("Distance Average: %7.4f", average_distance)
 
-        logger.info("Prototypes Count: %d", len(prototypes))
+        logger.info("Prototypes Count: %d", len(gcpl.prototypes))
 
         # test
         if (epoch + 1) % config.test_frequency == 0:
@@ -105,13 +104,12 @@ def train(config):
 
             for j, (feature, label) in enumerate(testloader):
                 feature = net(feature.to(net.device)).view(1, -1)
-                predicted_label, probability, min_distance = gcpl.predict(feature, prototypes)
+                predicted_label, probability, min_distance = gcpl.predict(feature)
 
                 labels_true.append(label)
                 labels_predicted.append(predicted_label)
 
-                logger.info("%5d: %d, %d, %7.4f, %7.4f",
-                            j + 1, label, predicted_label, probability, min_distance)
+                logger.info("%5d: %d, %d, %7.4f, %7.4f", j + 1, label, predicted_label, probability, min_distance)
 
             cm = confusion_matrix(labels_true, labels_predicted, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
 
