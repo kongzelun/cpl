@@ -191,19 +191,20 @@ class GCPLLoss(nn.Module):
         # p_loss = compute_distance(feature, closest_prototype).pow(2)
 
         # pairwise loss
-        distance = self.compute_distance(feature, closest_prototype)
+        prototypes = torch.cat(all_prototypes.get(label))
+        distance = self.compute_multi_distance(feature, prototypes)
         pw_loss = self._g(self.b - (self.tao - distance.pow(2)))
 
         for l in all_prototypes.dict:
             if l != label:
                 prototypes = torch.cat(all_prototypes.get(l))
                 distances = self.compute_multi_distance(feature, prototypes)
-                pw_loss += self._g(self.b + (self.tao - distances.min().pow(2)))
+                pw_loss += self._g(self.b + (self.tao - distances.pow(2)))
 
         return dce_loss + self.lambda_ * pw_loss, min_distance
 
     def assign_prototype(self, feature, label, all_prototypes: Prototypes):
-        closest_prototype = feature
+        # closest_prototype = feature
         min_distance = 0.0
 
         if label not in all_prototypes.dict:
@@ -217,11 +218,12 @@ class GCPLLoss(nn.Module):
 
             if min_distance < self.threshold:
                 Prototypes.update(prototypes[closest_prototype_index], feature)
-                closest_prototype = prototypes[closest_prototype_index]
+                # closest_prototype = prototypes[closest_prototype_index]
             else:
                 all_prototypes.append(feature, label)
 
-        return closest_prototype, min_distance
+        # return closest_prototype, min_distance
+        return min_distance
 
     def _g(self, z):
         return (1 + (self.beta * z).exp()).log() / self.beta
