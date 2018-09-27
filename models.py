@@ -192,13 +192,13 @@ class GCPLLoss(nn.Module):
 
         # pairwise loss
         distance = self.compute_distance(feature, closest_prototype)
-        pw_loss = self._g(self.b - (self.tao - distance))
+        pw_loss = self._g(self.b - (self.tao - distance.pow(2)))
 
         for l in all_prototypes.dict:
             if l != label:
                 prototypes = torch.cat(all_prototypes.get(l))
                 distances = self.compute_multi_distance(feature, prototypes)
-                pw_loss += self._g(self.b + (self.tao - distances.min()))
+                pw_loss += self._g(self.b + (self.tao - distances.min().pow(2)))
 
         return dce_loss + self.lambda_ * pw_loss, min_distance
 
