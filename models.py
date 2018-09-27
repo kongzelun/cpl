@@ -240,4 +240,4 @@ class GCPLLoss(nn.Module):
         predicted_label = all_prototypes[index].label
         probability = self.compute_probability(feature, predicted_label, all_prototypes)
 
-        return predicted_label, probability.item(), min_distance
+        return predicted_label, probability.item(), min_distance.item()
