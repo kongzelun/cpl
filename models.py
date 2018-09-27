@@ -194,8 +194,9 @@ class GCPLLoss(nn.Module):
         pw_loss = self._g(self.b - (self.tao - distances)).sum()
 
         for l in all_prototypes.dict:
-            distances = self.compute_multi_distance(feature, torch.cat(all_prototypes.dict[l]))
-            pw_loss += self._g(self.b + (self.tao - distances)).sum()
+            if l != label:
+                distances = self.compute_multi_distance(feature, torch.cat(all_prototypes.dict[l]))
+                pw_loss += self._g(self.b + (self.tao - distances)).sum()
 
         return dce_loss + self.lambda_ * pw_loss, min_distance
 

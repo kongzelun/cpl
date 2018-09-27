@@ -50,7 +50,7 @@ def train(config):
     prototypes = models.Prototypes()
 
     # cel = torch.nn.CrossEntropyLoss()
-    gcpl = models.GCPLLoss(threshold=config.threshold, gamma=config.gamma, tao=config.tao, b=1.0, beta=0.5, lambda_=config.lambda_)
+    gcpl = models.GCPLLoss(threshold=config.threshold, gamma=config.gamma, tao=config.tao, b=config.b, beta=0.5, lambda_=config.lambda_)
     sgd = optim.SGD(net.parameters(), lr=config.learning_rate, momentum=0.9)
 
     if os.path.exists(config.pkl_path):

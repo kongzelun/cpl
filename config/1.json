@@ -10,10 +10,10 @@
   "in_channels": 3,
   "learning_rate": 0.001,
   "threshold": 10.0,
-  "gamma": 0.3,
+  "gamma": 0.5,
   "tao": 10.0,
-  "b": 5.0,
-  "lambda_": 0.1,
+  "b": 2.5,
+  "lambda_": 0.01,
   "train_test_split": 6000,
   "epoch_number": 100,
   "test_frequency": 5
