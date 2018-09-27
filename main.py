@@ -44,7 +44,7 @@ def train(config):
     testloader = DataLoader(dataset=testset, batch_size=1, shuffle=False, num_workers=0)
 
     # net = models.CNNNet(device=device)
-    net = models.DenseNet(device=device, in_channels=config.in_channels, number_layers=8, growth_rate=12, drop_rate=0.0)
+    net = models.DenseNet(device=device, in_channels=config.in_channels, number_layers=6, growth_rate=12, drop_rate=0.0)
     logger.info("DenseNet Channels: %d", net.channels)
 
     prototypes = models.Prototypes()

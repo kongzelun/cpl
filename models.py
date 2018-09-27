@@ -181,6 +181,7 @@ class GCPLLoss(nn.Module):
         self.beta = beta
         self.compute_distance = nn.PairwiseDistance(p=2, eps=1e-6)
         self.compute_multi_distance = nn.PairwiseDistance(p=2, eps=1e-6, keepdim=True)
+        self.log_softmax = nn.LogSoftmax()
 
     def forward(self, feature, label, all_prototypes):
         min_distance = self.assign_prototype(feature.data, label, all_prototypes)
