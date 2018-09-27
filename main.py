@@ -7,7 +7,7 @@ import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import models
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import accuracy_score, confusion_matrix
 
 
 def setup_logger(level=logging.DEBUG, filename=None):
@@ -100,10 +100,8 @@ def train(config):
         if (epoch + 1) % config.test_frequency == 0:
             logger.info("Testset size: %d", len(testset))
 
-            correct = 0
             labels_true = []
             labels_predicted = []
-            min_distances = []
 
             for j, (feature, label) in enumerate(testloader):
                 feature = net(feature.to(net.device)).view(1, -1)
@@ -111,17 +109,13 @@ def train(config):
 
                 labels_true.append(label)
                 labels_predicted.append(predicted_label)
-                min_distances.append(min_distance)
-
-                if label == predicted_label:
-                    correct += 1
 
                 logger.info("%5d: %d, %d, %7.4f, %7.4f",
                             j + 1, label, predicted_label, probability, min_distance)
 
             cm = confusion_matrix(labels_true, labels_predicted, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
 
-            logger.info("Accuracy: %7.4f", correct / len(testloader))
+            logger.info("Accuracy: %7.4f", accuracy_score(labels_true, labels_predicted))
             logger.info("Confusion Matrix: \n%s\n", cm)
 
 
