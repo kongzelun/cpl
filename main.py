@@ -109,7 +109,7 @@ def train(config):
                 labels_true.append(label)
                 labels_predicted.append(predicted_label)
 
-                logger.info("%5d: %d, %d, %7.4f, %7.4f", j + 1, label, predicted_label, probability, min_distance)
+                logger.debug("%5d: %d, %d, %7.4f, %7.4f", j + 1, label, predicted_label, probability, min_distance)
 
             cm = confusion_matrix(labels_true, labels_predicted, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
 
