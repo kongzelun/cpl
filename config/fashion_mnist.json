@@ -1,0 +1,21 @@
+{
+  "dataset_path": "data/fashion-mnist_train.csv",
+  "pkl_path": "pkl/fashion-mnist.pkl",
+  "log_path": "log_fashion-mnist.txt",
+  "tensor_view": [
+    -1,
+    28,
+    28
+  ],
+  "in_channels": 1,
+  "layers": 10,
+  "learning_rate": 0.001,
+  "threshold": 10.0,
+  "gamma": 0.25,
+  "tao": 10.0,
+  "b": 2.5,
+  "lambda_": 0.01,
+  "train_test_split": 6000,
+  "epoch_number": 50,
+  "test_frequency": 2
+}
