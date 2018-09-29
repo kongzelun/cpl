@@ -40,11 +40,13 @@ class Config(object):
 class DataSet(Dataset):
     def __init__(self, dataset, tensor_view):
         self.data = []
+        self.label_set = set()
 
         for s in dataset:
             x = (tensor(s[:-1], dtype=torch.float) / 255).view(tensor_view)
             y = tensor(s[-1], dtype=torch.long)
             self.data.append((x, y))
+            self.label_set.add(s[-1])
 
     def __getitem__(self, index):
         return self.data[index]

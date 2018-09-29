@@ -47,7 +47,6 @@ def train(config):
     net = models.DenseNet(device=device, in_channels=config.in_channels, number_layers=config.layers, growth_rate=12, drop_rate=0.0)
     logger.info("DenseNet Channels: %d", net.channels)
 
-    # cel = torch.nn.CrossEntropyLoss()
     gcpl = models.GCPLLoss(threshold=config.threshold, gamma=config.gamma, tao=config.tao, b=config.b, beta=0.5, lambda_=config.lambda_)
     sgd = optim.SGD(net.parameters(), lr=config.learning_rate, momentum=0.9)
 
@@ -69,29 +68,31 @@ def train(config):
         gcpl.clear()
 
         running_loss = 0.0
-        distance_sum = 0.0
+        class_distances = {key: list() for key in trainset.label_set}
 
         for i, (feature, label) in enumerate(trainloader):
-            feature = feature.to(net.device)
+            feature, label = feature.to(net.device), label.item()
             sgd.zero_grad()
             feature = net(feature).view(1, -1)
-            loss, min_distance = gcpl(feature, label.item())
+            loss, min_distance = gcpl(feature, label)
             loss.backward()
             sgd.step()
 
             running_loss += loss.item()
-            distance_sum += min_distance
+
+            class_distances[label].append(min_distance)
 
             logger.debug("[%d, %d] %7.4f, %7.4f", epoch + 1, i + 1, loss.item(), min_distance)
 
         torch.save(net.state_dict(), config.pkl_path)
 
-        average_distance = distance_sum / len(trainloader)
+        average_distances = [sum(class_distances[l]) / len(class_distances[l]) for l in class_distances]
+        # thresholds = dict.fromkeys(trainset.label_set, None)
 
         # gcpl.threshold = average_distance * 2
         # gcpl.tao = average_distance * 2
 
-        logger.info("Distance Average: %7.4f", average_distance)
+        logger.info("Distance Average: \n%s", average_distances)
 
         logger.info("Prototypes Count: %d", len(gcpl.prototypes))
 
@@ -102,18 +103,28 @@ def train(config):
             labels_true = []
             labels_predicted = []
 
+            # cm = np.zeros()
+            # correct = 0
+
             for j, (feature, label) in enumerate(testloader):
                 feature = net(feature.to(net.device)).view(1, -1)
+                label = label.item()
                 predicted_label, probability, min_distance = gcpl.predict(feature)
 
                 labels_true.append(label)
                 labels_predicted.append(predicted_label)
 
+                # cm[label][predicted_label] += 1
+                #
+                # if label == predicted_label:
+                #     correct += 1
+
                 logger.debug("%5d: %d, %d, %7.4f, %7.4f", j + 1, label, predicted_label, probability, min_distance)
 
-            cm = confusion_matrix(labels_true, labels_predicted, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+            cm = confusion_matrix(labels_true, labels_predicted, sorted(list(testset.label_set)))
 
             logger.info("Accuracy: %7.4f", accuracy_score(labels_true, labels_predicted))
+            # logger.info("Accuracy: %7.4f", correct / len(testloader))
             logger.info("Confusion Matrix: \n%s\n", cm)
 
 
@@ -136,14 +147,6 @@ def main():
 
     if args.epoch:
         config.epoch_number = args.epoch
-
-    # try:
-    #     config_file = open("config/{}".format(args.config))
-    #     config = models.Config(**json.load(config_file))
-    # except FileNotFoundError:
-    #     print("Can't find config file.")
-    # finally:
-    #     config_file.close()
 
     setup_logger(level=logging.DEBUG, filename=config.log_path)
     train(config)
