@@ -12,8 +12,8 @@ class Config(object):
     # in_channels = 1
     # dataset_path = "data/cifar10_train.csv"
     dataset_path = None
-    pkl_path = None
-    log_path = None
+    path = None
+
     tensor_view = None
     in_channels = None
     layers = None

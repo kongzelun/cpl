@@ -1,7 +1,6 @@
 {
   "dataset_path": "data/cifar10_sample-test.csv",
-  "pkl_path": "pkl/1.pkl",
-  "log_path": "log-1.txt",
+  "path": "10-layers",
   "tensor_view": [
     -1,
     32,

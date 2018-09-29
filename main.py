@@ -50,8 +50,9 @@ def train(config):
     gcpl = models.GCPLLoss(threshold=config.threshold, gamma=config.gamma, tao=config.tao, b=config.b, beta=0.5, lambda_=config.lambda_)
     sgd = optim.SGD(net.parameters(), lr=config.learning_rate, momentum=0.9)
 
-    if os.path.exists(config.pkl_path):
-        state_dict = torch.load(config.pkl_path)
+    pkl_path = os.path.join(config.path, "{}.pkl".format(config.path))
+    if os.path.exists(pkl_path):
+        state_dict = torch.load(pkl_path)
         try:
             net.load_state_dict(state_dict)
             logger.info("Load state from file %s.", config.pkl_path)
@@ -84,7 +85,7 @@ def train(config):
 
             logger.debug("[%d, %d] %7.4f, %7.4f", epoch + 1, i + 1, loss.item(), min_distance)
 
-        torch.save(net.state_dict(), config.pkl_path)
+        torch.save(net.state_dict(), pkl_path)
 
         average_distances = [sum(class_distances[l]) / len(class_distances[l]) for l in class_distances]
         # thresholds = dict.fromkeys(trainset.label_set, None)
@@ -131,24 +132,21 @@ def train(config):
 def main():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('-c', '--config', type=str, help="Config file path.", required=True)
+    parser.add_argument('-c', '--config', type=str, help="Config directory path.", required=True)
     parser.add_argument('-e', '--epoch', type=int, help="Train epoch number.", default=None)
 
     args = parser.parse_args()
 
-    if not os.path.exists("pkl"):
-        os.mkdir("pkl")
+    if not os.path.exists(args.config):
+        raise RuntimeError("Config path not found!")
 
-    if not os.path.exists("config"):
-        os.mkdir("config")
-
-    with open("config/{}.json".format(args.config)) as config_file:
+    with open("{}/config.json".format(args.config)) as config_file:
         config = models.Config(**json.load(config_file))
 
     if args.epoch:
         config.epoch_number = args.epoch
 
-    setup_logger(level=logging.DEBUG, filename=config.log_path)
+    setup_logger(level=logging.DEBUG, filename=os.path.join(config.path, "{}.log".format(config.path)))
     train(config)
 
 
