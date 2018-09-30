@@ -191,7 +191,6 @@ def run_cel(config, device, trainset, testset):
 
         # test
         if (epoch + 1) % config.test_frequency == 0:
-            logger.info("Testset size: %d", len(testset))
 
             labels_true = []
             labels_predicted = []
