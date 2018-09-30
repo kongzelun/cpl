@@ -1,0 +1,18 @@
+{
+  "dataset_path": "data/cifar10_train.csv",
+  "loss_type": "gcpl",
+  "tensor_view": [
+    -1,
+    32,
+    32
+  ],
+  "in_channels": 3,
+  "layers": 10,
+  "learning_rate": 0.001,
+  "threshold": 10.0,
+  "gamma": 0.25,
+  "lambda_": 0.01,
+  "train_test_split": 6000,
+  "epoch_number": 50,
+  "test_frequency": 2
+}
