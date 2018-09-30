@@ -5,36 +5,8 @@ from torch.utils.data import Dataset
 import dense_net
 
 
-class Config(object):
-    # dataset_path = 'data/fashion-mnist_train.csv'
-    # pkl_path = "pkl/fashion-mnist.pkl"
-    # tensor_view = (-1, 28, 28)
-    # in_channels = 1
-    # dataset_path = "data/cifar10_train.csv"
-    dataset_path = None
-    path = None
-
-    tensor_view = None
-    in_channels = None
-    layers = None
-
-    learning_rate = None
-    threshold = None
-    gamma = None
-    tao = None
-    b = None
-    lambda_ = None
-
-    epoch_number = 1
-    test_frequency = 1
-    train_test_split = 5000
-
-    def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
-        self.values = kwargs
-
-    def __repr__(self):
-        return "{}".format(self.values)
+class Config:
+    pass
 
 
 class DataSet(Dataset):
@@ -112,7 +84,7 @@ class DenseNet(nn.Module):
         # global average pooling and classifier
         self.bn1 = nn.BatchNorm2d(channels)
         self.relu = nn.ReLU(inplace=True)
-        self.pooling = nn.AvgPool2d(kernel_size=1)
+        self.pooling = nn.AvgPool2d(kernel_size=2)
 
         self.channels = channels
 
@@ -126,6 +98,26 @@ class DenseNet(nn.Module):
         out = self.block3(out)
         out = self.relu(self.bn1(out))
         out = self.pooling(out)
+        return out
+
+
+class LinearNet(nn.Module):
+    def __init__(self, device, in_features):
+        super(LinearNet, self).__init__()
+
+        self.fc1 = nn.Linear(in_features, 1000)
+        self.fc2 = nn.Linear(1000, 100)
+        self.fc3 = nn.Linear(100, 10)
+
+        self.relu = nn.ReLU(inplace=True)
+
+        self.device = device
+        self.to(device)
+
+    def forward(self, x):
+        out = self.relu(self.fc1(x))
+        out = self.relu(self.fc2(out))
+        out = self.fc3(out)
         return out
 
 
@@ -167,39 +159,26 @@ class Prototypes(object):
         return len(self.features)
 
 
-class GCPLLoss(nn.Module):
-    def __init__(self, threshold, gamma=0.1, tao=10.0, b=1.0, beta=1.0, lambda_=0.1):
-        super(GCPLLoss, self).__init__()
-
+class DCELoss(nn.Module):
+    def __init__(self, threshold=10.0, gamma=0.1, lambda_=0.1):
+        super(DCELoss, self).__init__()
         self.threshold = threshold
         self.lambda_ = lambda_
         self.gamma = gamma
-        self.b = b
-        self.tao = tao
-        self.beta = beta
         self.compute_distance = nn.PairwiseDistance(p=2, eps=1e-6)
         self.compute_multi_distance = nn.PairwiseDistance(p=2, eps=1e-6, keepdim=True)
-        self.log_softmax = nn.LogSoftmax()
         self.prototypes = Prototypes()
 
     def forward(self, feature, label):
+        raise NotImplementedError
+
+    def compute_dec_loss(self, feature, label):
         closest_prototype, min_distance = self.assign_prototype(feature.data, label)
 
         probability = self.compute_probability(feature, label)
         dce_loss = -probability.log()
-        p_loss = self.compute_distance(feature, closest_prototype).pow(2)
 
-        # pairwise loss
-        # distance = self.compute_distance(feature, closest_prototype)
-        # pw_loss = self._g(self.b - (self.tao - distance.pow(2)))
-        #
-        # for l in self.prototypes.dict:
-        #     if l != label:
-        #         prototypes = torch.cat(self.prototypes.get(l))
-        #         distance = self.compute_multi_distance(feature, prototypes).min()
-        #         pw_loss += self._g(self.b + (self.tao - distance.pow(2)))
-
-        return dce_loss + self.lambda_ * p_loss, min_distance
+        return dce_loss, closest_prototype, min_distance
 
     def assign_prototype(self, feature, label):
         closest_prototype = feature
@@ -221,9 +200,6 @@ class GCPLLoss(nn.Module):
                 self.prototypes.append(feature, label)
 
         return closest_prototype, min_distance
-
-    def _g(self, z):
-        return (1 + (self.beta * z).exp()).log() / self.beta
 
     def compute_probability(self, feature, label):
         distances = self.compute_multi_distance(feature, torch.cat(self.prototypes.features))
@@ -249,3 +225,53 @@ class GCPLLoss(nn.Module):
 
     def clear(self):
         self.prototypes.clear()
+
+
+class PairwiseDCELoss(DCELoss):
+    def __init__(self, threshold=10.0, gamma=0.1, tao=10.0, b=1.0, beta=1.0, lambda_=0.1):
+        super(PairwiseDCELoss, self).__init__(threshold, gamma, lambda_)
+
+        self.threshold = threshold
+        self.gamma = gamma
+        self.lambda_ = lambda_
+
+        self.b = b
+        self.tao = tao
+        self.beta = beta
+
+    def forward(self, feature, label):
+        dce_loss, closest_prototype, min_distance = self.compute_dec_loss(feature, label)
+
+        # pairwise loss
+        distance = self.compute_distance(feature, closest_prototype)
+        pw_loss = self._g(self.b - (self.tao - distance.pow(2)))
+
+        for l in self.prototypes.dict:
+            if l != label:
+                prototypes = torch.cat(self.prototypes.get(l))
+                distance = self.compute_multi_distance(feature, prototypes).min()
+                pw_loss += self._g(self.b + (self.tao - distance.pow(2)))
+
+        return dce_loss + self.lambda_ * pw_loss, min_distance
+
+    def _g(self, z):
+        return (1 + (self.beta * z).exp()).log() / self.beta
+
+
+class GCPLLoss(DCELoss):
+    def __init__(self, threshold, gamma=0.1, lambda_=0.01):
+        super(GCPLLoss, self).__init__()
+
+        self.threshold = threshold
+        self.lambda_ = lambda_
+        self.gamma = gamma
+        self.compute_distance = nn.PairwiseDistance(p=2, eps=1e-6)
+        self.compute_multi_distance = nn.PairwiseDistance(p=2, eps=1e-6, keepdim=True)
+        self.log_softmax = nn.LogSoftmax()
+        self.prototypes = Prototypes()
+
+    def forward(self, feature, label):
+        dce_loss, closest_prototype, min_distance = self.compute_dec_loss(feature, label)
+        p_loss = self.compute_distance(feature, closest_prototype).pow(2)
+
+        return dce_loss + self.lambda_ * p_loss, min_distance

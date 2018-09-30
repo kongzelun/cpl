@@ -13,6 +13,7 @@
       <w>levelname</w>
       <w>mnist</w>
       <w>optim</w>
+      <w>pwdce</w>
       <w>relu</w>
       <w>softmax</w>
       <w>testloader</w>

@@ -4,10 +4,47 @@ import json
 import logging
 import numpy as np
 import torch
+import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import models
 from sklearn.metrics import accuracy_score, confusion_matrix
+
+
+class Config(object):
+    # dataset_path = 'data/fashion-mnist_train.csv'
+    # pkl_path = "pkl/fashion-mnist.pkl"
+    # tensor_view = (-1, 28, 28)
+    # in_channels = 1
+    # dataset_path = "data/cifar10_train.csv"
+    dataset_path = None
+    running_path = None
+    loss_type = None
+
+    tensor_view = None
+    in_channels = None
+    layers = None
+
+    learning_rate = None
+
+    threshold = None
+    gamma = None
+
+    tao = None
+    b = None
+
+    lambda_ = None
+
+    epoch_number = 1
+    test_frequency = 1
+    train_test_split = None
+
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+        self.values = kwargs
+
+    def __repr__(self):
+        return "{}".format(self.values)
 
 
 def setup_logger(level=logging.DEBUG, filename=None):
@@ -26,31 +63,23 @@ def setup_logger(level=logging.DEBUG, filename=None):
         logger.addHandler(file_handler)
 
 
-def train(config):
+def run_cpl(config, device, trainset, testset, criterion):
     logger = logging.getLogger(__name__)
 
     logger.info("%s", config)
+    logger.info("Trainset size: %d", len(trainset))
+    logger.info("Testset size: %d", len(testset))
 
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-    dataset = np.loadtxt(config.dataset_path, delimiter=',')
-    np.random.shuffle(dataset[:config.train_test_split])
-    np.random.shuffle(dataset[config.train_test_split:])
-
-    trainset = models.DataSet(dataset[:config.train_test_split], config.tensor_view)
-    trainloader = DataLoader(dataset=trainset, batch_size=1, shuffle=True, num_workers=4)
-
-    testset = models.DataSet(dataset[config.train_test_split:], config.tensor_view)
+    trainloader = DataLoader(dataset=trainset, batch_size=1, shuffle=True, num_workers=0)
     testloader = DataLoader(dataset=testset, batch_size=1, shuffle=False, num_workers=0)
 
     # net = models.CNNNet(device=device)
     net = models.DenseNet(device=device, in_channels=config.in_channels, number_layers=config.layers, growth_rate=12, drop_rate=0.0)
     logger.info("DenseNet Channels: %d", net.channels)
 
-    gcpl = models.GCPLLoss(threshold=config.threshold, gamma=config.gamma, tao=config.tao, b=config.b, beta=0.5, lambda_=config.lambda_)
     sgd = optim.SGD(net.parameters(), lr=config.learning_rate, momentum=0.9)
 
-    pkl_path = os.path.join(config.path, "{}.pkl".format(config.path))
+    pkl_path = os.path.join(config.running_path, "{}.pkl".format(config.running_path))
     if os.path.exists(pkl_path):
         state_dict = torch.load(pkl_path)
         try:
@@ -59,14 +88,12 @@ def train(config):
         except RuntimeError:
             logger.error("Loading state from file %s failed.", config.pkl_path)
 
+    # train
     for epoch in range(config.epoch_number):
         logger.info("Epoch number: %d", epoch + 1)
 
-        logger.info("Trainset size: %d", len(trainset))
-        # logger.info("%7.4f %7.4f %7.4f %7.4f", gcpl.threshold, gcpl.gamma, gcpl.tao, gcpl.lambda_)
-
         # train
-        gcpl.clear()
+        criterion.clear()
 
         running_loss = 0.0
         class_distances = {key: list() for key in trainset.label_set}
@@ -75,7 +102,7 @@ def train(config):
             feature, label = feature.to(net.device), label.item()
             sgd.zero_grad()
             feature = net(feature).view(1, -1)
-            loss, min_distance = gcpl(feature, label)
+            loss, min_distance = criterion(feature, label)
             loss.backward()
             sgd.step()
 
@@ -88,14 +115,79 @@ def train(config):
         torch.save(net.state_dict(), pkl_path)
 
         average_distances = [sum(class_distances[l]) / len(class_distances[l]) for l in class_distances]
-        # thresholds = dict.fromkeys(trainset.label_set, None)
-
-        # gcpl.threshold = average_distance * 2
-        # gcpl.tao = average_distance * 2
 
         logger.info("Distance Average: \n%s", average_distances)
 
-        logger.info("Prototypes Count: %d", len(gcpl.prototypes))
+        logger.info("Prototypes Count: %d", len(criterion.prototypes))
+
+        # test
+        if (epoch + 1) % config.test_frequency == 0:
+
+            labels_true = []
+            labels_predicted = []
+
+            for j, (feature, label) in enumerate(testloader):
+                feature, label = net(feature.to(net.device)).view(1, -1), label.item()
+                predicted_label, probability, min_distance = criterion.predict(feature)
+
+                labels_true.append(label)
+                labels_predicted.append(predicted_label)
+
+                logger.debug("%5d: %d, %d, %7.4f, %7.4f", j + 1, label, predicted_label, probability, min_distance)
+
+            cm = confusion_matrix(labels_true, labels_predicted, sorted(list(testset.label_set)))
+
+            logger.info("Accuracy: %7.4f", accuracy_score(labels_true, labels_predicted))
+            logger.info("Confusion Matrix: \n%s\n", cm)
+
+
+def run_cel(config, device, trainset, testset):
+    logger = logging.getLogger(__name__)
+
+    logger.info("%s", config)
+    logger.info("Trainset size: %d", len(trainset))
+    logger.info("Testset size: %d", len(testset))
+
+    trainloader = DataLoader(dataset=trainset, batch_size=1, shuffle=True, num_workers=0)
+    testloader = DataLoader(dataset=testset, batch_size=1, shuffle=False, num_workers=0)
+
+    # net = models.CNNNet(device=device)
+    net = models.DenseNet(device=device, in_channels=config.in_channels, number_layers=config.layers, growth_rate=12, drop_rate=0.0)
+    logger.info("DenseNet Channels: %d", net.channels)
+    fc_net = models.LinearNet(device=device, in_features=net.channels * config.tensor_view[1] // 4 * config.tensor_view[2] // 4)
+
+    cel = nn.CrossEntropyLoss()
+    sgd = optim.SGD(net.parameters(), lr=config.learning_rate, momentum=0.9)
+
+    pkl_path = os.path.join(config.running_path, "{}.pkl".format(config.running_path))
+    if os.path.exists(pkl_path):
+        state_dict = torch.load(pkl_path)
+        try:
+            net.load_state_dict(state_dict)
+            logger.info("Load state from file %s.", config.pkl_path)
+        except RuntimeError:
+            logger.error("Loading state from file %s failed.", config.pkl_path)
+
+    for epoch in range(config.epoch_number):
+        logger.info("Epoch number: %d", epoch + 1)
+
+        # train
+        running_loss = 0.0
+
+        for i, (feature, label) in enumerate(trainloader):
+            feature, label = feature.to(net.device), label.to(net.device)
+            sgd.zero_grad()
+            feature = net(feature).view(1, -1)
+            feature = fc_net(feature)
+            loss = cel(feature, label)
+            loss.backward()
+            sgd.step()
+
+            running_loss += loss.item()
+
+            logger.debug("[%d, %d] %7.4f", epoch + 1, i + 1, loss.item())
+
+        torch.save(net.state_dict(), pkl_path)
 
         # test
         if (epoch + 1) % config.test_frequency == 0:
@@ -104,28 +196,19 @@ def train(config):
             labels_true = []
             labels_predicted = []
 
-            # cm = np.zeros()
-            # correct = 0
-
             for j, (feature, label) in enumerate(testloader):
-                feature = net(feature.to(net.device)).view(1, -1)
-                label = label.item()
-                predicted_label, probability, min_distance = gcpl.predict(feature)
+                feature, label = feature.to(net.device), label.item()
+                feature = net(feature).view(1, -1)
+                _, predicted_label = fc_net(feature).max(dim=1)
 
                 labels_true.append(label)
                 labels_predicted.append(predicted_label)
 
-                # cm[label][predicted_label] += 1
-                #
-                # if label == predicted_label:
-                #     correct += 1
-
-                logger.debug("%5d: %d, %d, %7.4f, %7.4f", j + 1, label, predicted_label, probability, min_distance)
+                logger.debug("%5d: %d, %d", j + 1, label, predicted_label)
 
             cm = confusion_matrix(labels_true, labels_predicted, sorted(list(testset.label_set)))
 
             logger.info("Accuracy: %7.4f", accuracy_score(labels_true, labels_predicted))
-            # logger.info("Accuracy: %7.4f", correct / len(testloader))
             logger.info("Confusion Matrix: \n%s\n", cm)
 
 
@@ -133,6 +216,7 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('-c', '--config', type=str, help="Config directory path.", required=True)
+    parser.add_argument('--clear', help="Clear running path.", action="store_true")
     parser.add_argument('-e', '--epoch', type=int, help="Train epoch number.", default=None)
 
     args = parser.parse_args()
@@ -141,13 +225,41 @@ def main():
         raise RuntimeError("Config path not found!")
 
     with open("{}/{}.json".format(args.config, args.config)) as config_file:
-        config = models.Config(**json.load(config_file))
+        config = Config(**json.load(config_file))
+        log_path = os.path.join(config.running_path, "{}.log".format(config.running_path))
+        pkl_path = os.path.join(config.running_path, "{}.pkl".format(config.running_path))
 
     if args.epoch:
         config.epoch_number = args.epoch
 
-    setup_logger(level=logging.DEBUG, filename=os.path.join(config.path, "{}.log".format(config.path)))
-    train(config)
+    if args.clear:
+        try:
+            os.remove(log_path)
+            os.remove(pkl_path)
+        except FileNotFoundError:
+            pass
+
+    setup_logger(level=logging.DEBUG, filename=log_path)
+
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    dataset = np.loadtxt(config.dataset_path, delimiter=',')
+    np.random.shuffle(dataset[:config.train_test_split])
+    np.random.shuffle(dataset[config.train_test_split:])
+
+    trainset = models.DataSet(dataset[:config.train_test_split], config.tensor_view)
+    testset = models.DataSet(dataset[config.train_test_split:], config.tensor_view)
+
+    if config.loss_type == 'gcpl':
+        gcpl = models.GCPLLoss(threshold=config.threshold, gamma=config.gamma, lambda_=config.lambda_)
+        run_cpl(config, device, trainset, testset, gcpl)
+    elif config.loss_type == 'pairwise_dce':
+        pwdce = models.PairwiseDCELoss(threshold=config.threshold, gamma=config.gamma, tao=config.tao, b=config.b, beta=0.5, lambda_=config.lambda_)
+        run_cpl(config, device, trainset, testset, pwdce)
+    elif config.loss_type == 'cel':
+        run_cel(config, device, trainset, testset)
+    else:
+        raise RuntimeError('Cannot find "{}" loss type.'.format(config.loss_type))
 
 
 if __name__ == '__main__':

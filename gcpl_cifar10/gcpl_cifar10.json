@@ -1,17 +1,17 @@
 {
-  "dataset_path": "data/fashion-mnist_train.csv",
+  "dataset_path": "data/cifar10_sample-test.csv",
+  "running_path": "gcpl_fashion-mnist",
+  "loss_type": "gcpl",
   "tensor_view": [
     -1,
-    28,
-    28
+    32,
+    32
   ],
-  "in_channels": 1,
+  "in_channels": 3,
   "layers": 10,
   "learning_rate": 0.001,
   "threshold": 10.0,
   "gamma": 0.25,
-  "tao": 10.0,
-  "b": 2.5,
   "lambda_": 0.01,
   "train_test_split": 6000,
   "epoch_number": 50,
