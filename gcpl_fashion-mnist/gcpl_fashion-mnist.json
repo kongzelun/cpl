@@ -1,6 +1,5 @@
 {
   "dataset_path": "data/fashion-mnist_stream.csv",
-  "running_path": "gcpl_fashion-mnist",
   "loss_type": "gcpl",
   "tensor_view": [
     -1,

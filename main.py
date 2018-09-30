@@ -226,6 +226,7 @@ def main():
 
     with open("{}/{}.json".format(args.config, args.config)) as config_file:
         config = Config(**json.load(config_file))
+        config.running_path = args.config
         log_path = os.path.join(config.running_path, "{}.log".format(config.running_path))
         pkl_path = os.path.join(config.running_path, "{}.pkl".format(config.running_path))
 
