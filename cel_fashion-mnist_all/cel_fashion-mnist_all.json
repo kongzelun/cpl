@@ -1,0 +1,15 @@
+{
+  "dataset_path": "data/fashion-mnist_train.csv",
+  "loss_type": "cel",
+  "tensor_view": [
+    -1,
+    28,
+    28
+  ],
+  "in_channels": 1,
+  "layers": 10,
+  "learning_rate": 0.001,
+  "train_test_split": 6000,
+  "epoch_number": 50,
+  "test_frequency": 2
+}
