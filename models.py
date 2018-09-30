@@ -187,19 +187,19 @@ class GCPLLoss(nn.Module):
 
         probability = self.compute_probability(feature, label)
         dce_loss = -probability.log()
-        # p_loss = compute_distance(feature, closest_prototype).pow(2)
+        p_loss = self.compute_distance(feature, closest_prototype).pow(2)
 
         # pairwise loss
-        distance = self.compute_distance(feature, closest_prototype)
-        pw_loss = self._g(self.b - (self.tao - distance.pow(2)))
+        # distance = self.compute_distance(feature, closest_prototype)
+        # pw_loss = self._g(self.b - (self.tao - distance.pow(2)))
+        #
+        # for l in self.prototypes.dict:
+        #     if l != label:
+        #         prototypes = torch.cat(self.prototypes.get(l))
+        #         distance = self.compute_multi_distance(feature, prototypes).min()
+        #         pw_loss += self._g(self.b + (self.tao - distance.pow(2)))
 
-        for l in self.prototypes.dict:
-            if l != label:
-                prototypes = torch.cat(self.prototypes.get(l))
-                distance = self.compute_multi_distance(feature, prototypes).min()
-                pw_loss += self._g(self.b + (self.tao - distance.pow(2)))
-
-        return dce_loss + self.lambda_ * pw_loss, min_distance
+        return dce_loss + self.lambda_ * p_loss, min_distance
 
     def assign_prototype(self, feature, label):
         closest_prototype = feature

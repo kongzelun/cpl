@@ -63,7 +63,7 @@ def train(config):
         logger.info("Epoch number: %d", epoch + 1)
 
         logger.info("Trainset size: %d", len(trainset))
-        logger.info("%7.4f %7.4f %7.4f %7.4f", gcpl.threshold, gcpl.gamma, gcpl.tao, gcpl.lambda_)
+        # logger.info("%7.4f %7.4f %7.4f %7.4f", gcpl.threshold, gcpl.gamma, gcpl.tao, gcpl.lambda_)
 
         # train
         gcpl.clear()
@@ -140,7 +140,7 @@ def main():
     if not os.path.exists(args.config):
         raise RuntimeError("Config path not found!")
 
-    with open("{}/config.json".format(args.config)) as config_file:
+    with open("{}/{}.json".format(args.config, args.config)) as config_file:
         config = models.Config(**json.load(config_file))
 
     if args.epoch:
