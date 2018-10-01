@@ -154,7 +154,7 @@ def run_cel(config, device, trainset, testset):
     # net = models.CNNNet(device=device)
     net = models.DenseNet(device=device, in_channels=config.in_channels, number_layers=config.layers, growth_rate=12, drop_rate=0.0)
     logger.info("DenseNet Channels: %d", net.channels)
-    fc_net = models.LinearNet(device=device, in_features=net.channels * config.tensor_view[1] // 8 * config.tensor_view[2] // 8)
+    fc_net = models.LinearNet(device=device, in_features=net.channels * (config.tensor_view[1] // 8) * (config.tensor_view[2] // 8))
 
     cel = nn.CrossEntropyLoss()
     sgd = optim.SGD(net.parameters(), lr=config.learning_rate, momentum=0.9)
