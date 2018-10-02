@@ -75,7 +75,7 @@ def run_cpl(config, device, trainset, testset, criterion):
 
     # net = models.CNNNet(device=device)
     net = models.DenseNet(device=device, in_channels=config.in_channels, number_layers=config.layers, growth_rate=12, drop_rate=0.0)
-    logger.info("DenseNet Channels: %d", net.channels)
+    logger.info("DenseNet Channels: %d\n", net.channels)
 
     sgd = optim.SGD(net.parameters(), lr=config.learning_rate, momentum=0.9)
 
@@ -84,9 +84,9 @@ def run_cpl(config, device, trainset, testset, criterion):
         state_dict = torch.load(pkl_path)
         try:
             net.load_state_dict(state_dict)
-            logger.info("Load state from file %s.", config.pkl_path)
+            logger.info("Load state from file %s.", pkl_path)
         except RuntimeError:
-            logger.error("Loading state from file %s failed.", config.pkl_path)
+            logger.error("Loading state from file %s failed.", pkl_path)
 
     # train
     for epoch in range(config.epoch_number):
@@ -96,36 +96,31 @@ def run_cpl(config, device, trainset, testset, criterion):
         criterion.clear()
 
         running_loss = 0.0
-        # class_distances = {l: list() for l in trainset.label_set}
         intra_class_distances = []
 
         for i, (feature, label) in enumerate(trainloader):
             feature, label = feature.to(net.device), label.item()
             sgd.zero_grad()
             feature = net(feature).view(1, -1)
-            loss, min_distance = criterion(feature, label)
+            loss, distance = criterion(feature, label)
             loss.backward()
             sgd.step()
 
             running_loss += loss.item()
 
-            # class_distances[label].append(min_distance)
-            intra_class_distances.append((label, min_distance))
+            intra_class_distances.append((label, distance))
 
-            logger.debug("[%d, %d] %7.4f, %7.4f", epoch + 1, i + 1, loss.item(), min_distance)
+            logger.debug("[%d, %d] %7.4f, %7.4f", epoch + 1, i + 1, loss.item(), distance)
 
         torch.save(net.state_dict(), pkl_path)
 
-        # class_distances = {l: np.array(d) for l, d in class_distances.items()}
-        # average_distances = [sum(class_distances[l]) / len(class_distances[l]) for l in class_distances]
-
         detector = models.Detector(intra_class_distances, config.std_coefficient, trainset.label_set)
 
-        logger.info("Distance Average: \n%s", detector.average_distances)
-        logger.info("Distance Std: \n%s", detector.std_distances)
-        logger.info("Distance Threshold: \n%s", detector.thresholds)
-
         logger.info("Prototypes Count: %d", len(criterion.prototypes))
+
+        logger.info("Distance Average: %s", detector.average_distances)
+        logger.info("Distance Std: %s", detector.std_distances)
+        logger.info("Distance Threshold: %s", detector.thresholds)
 
         # test
         if (epoch + 1) % config.test_frequency == 0:
@@ -134,21 +129,21 @@ def run_cpl(config, device, trainset, testset, criterion):
 
             for j, (feature, label) in enumerate(testloader):
                 feature, label = net(feature.to(net.device)).view(1, -1), label.item()
-                predicted_label, probability, min_distance = criterion.predict(feature)
-                novelty = detector(predicted_label, probability, min_distance)
+                predicted_label, probability, distance = criterion.predict(feature)
+                novelty = detector(predicted_label, probability, distance)
 
-                detection_results.append((label, predicted_label, probability, min_distance, novelty))
+                detection_results.append((label, predicted_label, probability, distance, novelty))
 
-                logger.debug("%5d: %d, %d, %7.4f, %7.4f, %s", j + 1, label, predicted_label, probability, min_distance, novelty)
+                logger.debug("%5d: %d, %d, %7.4f, %7.4f, %s", j + 1, label, predicted_label, probability, distance, novelty)
 
             precision, recall = detector.evaluate(detection_results)
 
             cm = confusion_matrix(detector.results['true label'], detector.results['predicted label'], sorted(list(testset.label_set)))
 
             logger.info("Accuracy: %7.4f", accuracy_score(detector.results['true label'], detector.results['predicted label']))
-            logger.info("Confusion Matrix: \n%s", cm)
             logger.info("Precision: %7.4f", precision)
             logger.info("Recall: %7.4f", recall)
+            logger.info("Confusion Matrix: \n%s\n", cm)
 
 
 def run_cel(config, device, trainset, testset):
@@ -159,7 +154,7 @@ def run_cel(config, device, trainset, testset):
 
     # net = models.CNNNet(device=device)
     net = models.DenseNet(device=device, in_channels=config.in_channels, number_layers=config.layers, growth_rate=12, drop_rate=0.0)
-    logger.info("DenseNet Channels: %d", net.channels)
+    logger.info("DenseNet Channels: %d\n", net.channels)
     fc_net = models.LinearNet(device=device, in_features=net.channels * (config.tensor_view[1] // 8) * (config.tensor_view[2] // 8))
 
     cel = nn.CrossEntropyLoss()
@@ -254,7 +249,7 @@ def main():
     np.random.shuffle(dataset[config.train_test_split:])
 
     trainset = models.DataSet(dataset[:config.train_test_split], config.tensor_view)
-    testset = models.DataSet(dataset[config.train_test_split:], config.tensor_view)
+    testset = models.DataSet(dataset[config.train_test_split:100], config.tensor_view)
 
     logger.info("\n%s", config)
     logger.info("Trainset size: %d", len(trainset))

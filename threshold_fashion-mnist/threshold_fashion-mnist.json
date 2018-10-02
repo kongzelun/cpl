@@ -1,12 +1,12 @@
 {
-  "dataset_path": "data/cifar10_sample-test.csv",
+  "dataset_path": "data/fashion-mnist_stream.csv",
   "loss_type": "pairwise_dce",
   "tensor_view": [
     -1,
-    32,
-    32
+    28,
+    28
   ],
-  "in_channels": 3,
+  "in_channels": 1,
   "layers": 10,
   "learning_rate": 0.001,
   "threshold": 10.0,
@@ -15,7 +15,7 @@
   "b": 3.0,
   "lambda_": 0.01,
   "std_coefficient": 1.0,
-  "train_test_split": 6000,
-  "epoch_number": 1,
+  "train_test_split": 60,
+  "epoch_number": 50,
   "test_frequency": 1
 }

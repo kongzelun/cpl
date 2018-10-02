@@ -280,7 +280,7 @@ class Detector(object):
         self.std_coefficient = std_coefficient
         self.known_labels = known_labels
         self.average_distances = {l: np.average(self.distances[self.distances['label'] == l]['distance']) for l in self.known_labels}
-        self.std_distances = {l: np.average(self.distances[self.distances['label'] == l]['distance'].std()) for l, d in self.known_labels}
+        self.std_distances = {l: self.distances[self.distances['label'] == l]['distance'].std() for l in self.known_labels}
         self.thresholds = {l: self.average_distances[l] + self.std_coefficient * self.std_distances[l] for l in self.known_labels}
         self.results = None
 
@@ -297,7 +297,7 @@ class Detector(object):
         self.results = np.array(results, dtype=[('true label', np.int32), ('predicted label', np.int32), ('probability', np.float32), ('distance', np.float32), ('novelty', np.bool)])
 
         total_novelties = self.results[~np.isin(self.results['true label'], list(self.known_labels))]
-        detected_novelties = self.results[self.results['novelty'] == True]
+        detected_novelties = self.results[self.results['novelty'] == np.True_]
         real_novelties = detected_novelties[~np.isin(detected_novelties['true label'], list(self.known_labels))]
 
         true_positive = len(real_novelties)
