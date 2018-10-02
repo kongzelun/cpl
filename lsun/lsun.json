@@ -14,7 +14,7 @@
   "tao": 10.0,
   "b": 3.0,
   "lambda_": 0.01,
-  "std_coefficient": 1.5,
+  "std_coefficient": 0.25,
   "train_test_split": 6000,
   "epoch_number": 50,
   "test_frequency": 1

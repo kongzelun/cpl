@@ -298,13 +298,13 @@ class Detector(object):
 
         total_novelties = self.results[~np.isin(self.results['true label'], list(self.known_labels))]
         detected_novelties = self.results[self.results['novelty'] == np.True_]
-        real_novelties = detected_novelties[~np.isin(detected_novelties['true label'], list(self.known_labels))]
+        detected_real_novelties = detected_novelties[~np.isin(detected_novelties['true label'], list(self.known_labels))]
 
-        true_positive = len(real_novelties)
-        true_negative = len(detected_novelties) - len(real_novelties)
-        false_negative = len(total_novelties) - len(real_novelties)
+        true_positive = len(detected_real_novelties)
+        false_positive = len(detected_novelties) - len(detected_real_novelties)
+        false_negative = len(total_novelties) - len(detected_real_novelties)
 
-        precision = true_positive / (true_positive + true_negative)
+        precision = true_positive / (true_positive + false_positive)
         recall = true_positive / (true_positive + false_negative)
 
         return precision, recall
