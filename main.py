@@ -251,9 +251,9 @@ def main():
     trainset = models.DataSet(dataset[:config.train_test_split], config.tensor_view)
     testset = models.DataSet(dataset[config.train_test_split:], config.tensor_view)
 
-    logger.info("\n%s", config)
+    logger.info("%s", config)
     logger.info("Trainset size: %d", len(trainset))
-    logger.info("Testset size: %d", len(testset))
+    logger.info("Testset size: %d\n", len(testset))
 
     if config.loss_type == 'gcpl':
         gcpl = models.GCPLLoss(threshold=config.threshold, gamma=config.gamma, lambda_=config.lambda_)
