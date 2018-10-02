@@ -141,12 +141,14 @@ def run_cpl(config, device, trainset, testset, criterion):
 
                 logger.debug("%5d: %d, %d, %7.4f, %7.4f, %s", j + 1, label, predicted_label, probability, min_distance, novelty)
 
-            detector.evaluate(detection_results)
+            precision, recall = detector.evaluate(detection_results)
 
             cm = confusion_matrix(detector.results['true label'], detector.results['predicted label'], sorted(list(testset.label_set)))
 
             logger.info("Accuracy: %7.4f", accuracy_score(detector.results['true label'], detector.results['predicted label']))
-            logger.info("Confusion Matrix: \n%s\n", cm)
+            logger.info("Confusion Matrix: \n%s", cm)
+            logger.info("Precision: %7.4f", precision)
+            logger.info("Recall: %7.4f", recall)
 
 
 def run_cel(config, device, trainset, testset):
