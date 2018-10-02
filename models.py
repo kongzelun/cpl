@@ -2,11 +2,8 @@ import torch
 import torch.nn as nn
 from torch import tensor
 from torch.utils.data import Dataset
+import numpy as np
 import dense_net
-
-
-class Config:
-    pass
 
 
 class DataSet(Dataset):
@@ -18,7 +15,7 @@ class DataSet(Dataset):
             x = (tensor(s[:-1], dtype=torch.float) / 255).view(tensor_view)
             y = tensor(s[-1], dtype=torch.long)
             self.data.append((x, y))
-            self.label_set.add(s[-1])
+            self.label_set.add(int(s[-1]))
 
     def __getitem__(self, index):
         return self.data[index]
@@ -275,3 +272,39 @@ class GCPLLoss(DCELoss):
         p_loss = self.compute_distance(feature, closest_prototype).pow(2)
 
         return dce_loss + self.lambda_ * p_loss, min_distance
+
+
+class Detector(object):
+    def __init__(self, intra_class_distances, std_coefficient, known_labels):
+        self.distances = np.array(intra_class_distances, dtype=[('label', np.int32), ('distance', np.float32)])
+        self.std_coefficient = std_coefficient
+        self.known_labels = known_labels
+        self.average_distances = {l: np.average(self.distances[self.distances['label'] == l]['distance']) for l in self.known_labels}
+        self.std_distances = {l: np.average(self.distances[self.distances['label'] == l]['distance'].std()) for l, d in self.known_labels}
+        self.thresholds = {l: self.average_distances[l] + self.std_coefficient * self.std_distances[l] for l in self.known_labels}
+        self.results = None
+
+    def __call__(self, predicted_label, probability, distance):
+        novelty = False
+        if distance > self.thresholds[predicted_label]:
+            novelty = True
+        elif probability < 0.8:
+            novelty = True
+
+        return novelty
+
+    def evaluate(self, results):
+        self.results = np.array(results, dtype=[('true label', np.int32), ('predicted label', np.int32), ('probability', np.float32), ('distance', np.float32), ('novelty', np.bool)])
+
+        total_novelties = self.results[~np.isin(self.results['true label'], list(self.known_labels))]
+        detected_novelties = self.results[self.results['novelty'] == True]
+        real_novelties = detected_novelties[~np.isin(detected_novelties['true label'], list(self.known_labels))]
+
+        true_positive = len(real_novelties)
+        true_negative = len(detected_novelties) - len(real_novelties)
+        false_negative = len(total_novelties) - len(real_novelties)
+
+        precision = true_positive / (true_positive + true_negative)
+        recall = true_positive / (true_positive + false_negative)
+
+        return precision, recall

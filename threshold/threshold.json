@@ -1,0 +1,21 @@
+{
+  "dataset_path": "data/cifar10_sample-test.csv",
+  "loss_type": "pairwise_dce",
+  "tensor_view": [
+    -1,
+    32,
+    32
+  ],
+  "in_channels": 3,
+  "layers": 10,
+  "learning_rate": 0.001,
+  "threshold": 10.0,
+  "gamma": 0.3,
+  "tao": 10.0,
+  "b": 3.0,
+  "lambda_": 0.01,
+  "std_coefficient": 1.0,
+  "train_test_split": 100,
+  "epoch_number": 1,
+  "test_frequency": 1
+}

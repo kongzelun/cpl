@@ -35,6 +35,8 @@ class Config(object):
 
     lambda_ = None
 
+    std_coefficient = None
+
     epoch_number = 1
     test_frequency = 1
     train_test_split = None
@@ -62,13 +64,11 @@ def setup_logger(level=logging.DEBUG, filename=None):
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
 
+    return logger
+
 
 def run_cpl(config, device, trainset, testset, criterion):
     logger = logging.getLogger(__name__)
-
-    logger.info("%s", config)
-    logger.info("Trainset size: %d", len(trainset))
-    logger.info("Testset size: %d", len(testset))
 
     trainloader = DataLoader(dataset=trainset, batch_size=1, shuffle=True, num_workers=0)
     testloader = DataLoader(dataset=testset, batch_size=1, shuffle=False, num_workers=0)
@@ -96,7 +96,8 @@ def run_cpl(config, device, trainset, testset, criterion):
         criterion.clear()
 
         running_loss = 0.0
-        class_distances = {key: list() for key in trainset.label_set}
+        # class_distances = {l: list() for l in trainset.label_set}
+        intra_class_distances = []
 
         for i, (feature, label) in enumerate(trainloader):
             feature, label = feature.to(net.device), label.item()
@@ -108,45 +109,48 @@ def run_cpl(config, device, trainset, testset, criterion):
 
             running_loss += loss.item()
 
-            class_distances[label].append(min_distance)
+            # class_distances[label].append(min_distance)
+            intra_class_distances.append((label, min_distance))
 
             logger.debug("[%d, %d] %7.4f, %7.4f", epoch + 1, i + 1, loss.item(), min_distance)
 
         torch.save(net.state_dict(), pkl_path)
 
-        average_distances = [sum(class_distances[l]) / len(class_distances[l]) for l in class_distances]
+        # class_distances = {l: np.array(d) for l, d in class_distances.items()}
+        # average_distances = [sum(class_distances[l]) / len(class_distances[l]) for l in class_distances]
 
-        logger.info("Distance Average: \n%s", average_distances)
+        detector = models.Detector(intra_class_distances, config.std_coefficient, trainset.label_set)
+
+        logger.info("Distance Average: \n%s", detector.average_distances)
+        logger.info("Distance Std: \n%s", detector.std_distances)
+        logger.info("Distance Threshold: \n%s", detector.thresholds)
 
         logger.info("Prototypes Count: %d", len(criterion.prototypes))
 
         # test
         if (epoch + 1) % config.test_frequency == 0:
 
-            labels_true = []
-            labels_predicted = []
+            detection_results = []
 
             for j, (feature, label) in enumerate(testloader):
                 feature, label = net(feature.to(net.device)).view(1, -1), label.item()
                 predicted_label, probability, min_distance = criterion.predict(feature)
+                novelty = detector(predicted_label, probability, min_distance)
 
-                labels_true.append(label)
-                labels_predicted.append(predicted_label)
+                detection_results.append((label, predicted_label, probability, min_distance, novelty))
 
-                logger.debug("%5d: %d, %d, %7.4f, %7.4f", j + 1, label, predicted_label, probability, min_distance)
+                logger.debug("%5d: %d, %d, %7.4f, %7.4f, %s", j + 1, label, predicted_label, probability, min_distance, novelty)
 
-            cm = confusion_matrix(labels_true, labels_predicted, sorted(list(testset.label_set)))
+            detector.evaluate(detection_results)
 
-            logger.info("Accuracy: %7.4f", accuracy_score(labels_true, labels_predicted))
+            cm = confusion_matrix(detector.results['true label'], detector.results['predicted label'], sorted(list(testset.label_set)))
+
+            logger.info("Accuracy: %7.4f", accuracy_score(detector.results['true label'], detector.results['predicted label']))
             logger.info("Confusion Matrix: \n%s\n", cm)
 
 
 def run_cel(config, device, trainset, testset):
     logger = logging.getLogger(__name__)
-
-    logger.info("%s", config)
-    logger.info("Trainset size: %d", len(trainset))
-    logger.info("Testset size: %d", len(testset))
 
     trainloader = DataLoader(dataset=trainset, batch_size=1, shuffle=True, num_workers=0)
     testloader = DataLoader(dataset=testset, batch_size=1, shuffle=False, num_workers=0)
@@ -239,7 +243,7 @@ def main():
         except FileNotFoundError:
             pass
 
-    setup_logger(level=logging.DEBUG, filename=log_path)
+    logger = setup_logger(level=logging.DEBUG, filename=log_path)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -249,6 +253,10 @@ def main():
 
     trainset = models.DataSet(dataset[:config.train_test_split], config.tensor_view)
     testset = models.DataSet(dataset[config.train_test_split:], config.tensor_view)
+
+    logger.info("\n%s", config)
+    logger.info("Trainset size: %d", len(trainset))
+    logger.info("Testset size: %d", len(testset))
 
     if config.loss_type == 'gcpl':
         gcpl = models.GCPLLoss(threshold=config.threshold, gamma=config.gamma, lambda_=config.lambda_)
