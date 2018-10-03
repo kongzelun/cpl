@@ -307,7 +307,7 @@ class Detector(object):
         novelty = False
         if distance > self.thresholds[predicted_label]:
             novelty = True
-        elif probability < 0.8:
+        elif probability < 0.9:
             novelty = True
 
         return novelty

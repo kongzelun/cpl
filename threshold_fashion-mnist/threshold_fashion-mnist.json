@@ -1,5 +1,5 @@
 {
-  "train": true,
+  "train": false,
   "test": true,
   "dataset_path": "data/fashion-mnist_stream.csv",
   "loss_type": "pdce",
@@ -16,7 +16,7 @@
   "tao": 10.0,
   "b": 3.0,
   "lambda_": 0.01,
-  "std_coefficient": 1.5,
+  "std_coefficient": 0.0,
   "train_test_split": 6000,
   "epoch_number": 1,
   "test_frequency": 1
