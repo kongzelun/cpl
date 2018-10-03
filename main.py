@@ -299,7 +299,7 @@ def main():
     np.random.shuffle(dataset[config.train_test_split:])
 
     trainset = models.DataSet(dataset[:config.train_test_split], config.tensor_view)
-    testset = models.DataSet(dataset[config.train_test_split:10000], config.tensor_view)
+    testset = models.DataSet(dataset[config.train_test_split:], config.tensor_view)
 
     logger.info("********************************************************************************")
     logger.info("%s", config)
