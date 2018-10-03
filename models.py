@@ -5,6 +5,9 @@ from torch.utils.data import Dataset
 import numpy as np
 import dense_net
 
+compute_distance = nn.PairwiseDistance(p=2, eps=1e-6)
+compute_multi_distance = nn.PairwiseDistance(p=2, eps=1e-6, keepdim=True)
+
 
 class DataSet(Dataset):
     def __init__(self, dataset, tensor_view):
@@ -119,9 +122,40 @@ class LinearNet(nn.Module):
 
 
 class Prototypes(object):
-    def __init__(self):
+    def __init__(self, threshold):
+        super(Prototypes, self).__init__()
+
         self.features = []
         self.dict = {}
+        self.threshold = threshold
+
+    def assign(self, feature, label):
+        """
+        Assign the sample to a prototype.
+        :param feature: feature of the sample.
+        :param label: label of the sample.
+        :return:
+        """
+
+        closest_prototype = feature
+        min_distance = 0.0
+
+        if label not in self.dict:
+            self.append(feature, label)
+        else:
+            # find closest prototype from prototypes in corresponding class
+            prototypes = self.dict[label]
+            distances = compute_multi_distance(feature, torch.cat(prototypes))
+            min_distance, closest_prototype_index = distances.min(dim=0)
+            min_distance = min_distance.item()
+
+            if min_distance < self.threshold:
+                Prototypes.update(prototypes[closest_prototype_index], feature)
+                closest_prototype = prototypes[closest_prototype_index]
+            else:
+                self.append(feature, label)
+
+        return closest_prototype, min_distance
 
     def append(self, feature, label):
         setattr(feature, 'label', label)
@@ -146,6 +180,13 @@ class Prototypes(object):
     def get(self, label):
         return self.dict[label]
 
+    def save(self, pkl_path):
+        torch.save(self, pkl_path)
+
+    @staticmethod
+    def load(pkl_path):
+        return torch.load(pkl_path)
+
     def __getitem__(self, item):
         return self.features[item]
 
@@ -157,52 +198,27 @@ class Prototypes(object):
 
 
 class DCELoss(nn.Module):
-    def __init__(self, threshold=10.0, gamma=0.1, lambda_=0.1):
+    def __init__(self, prototypes_path=None, gamma=0.1, lambda_=0.1):
         super(DCELoss, self).__init__()
-        self.threshold = threshold
         self.lambda_ = lambda_
         self.gamma = gamma
-        self.compute_distance = nn.PairwiseDistance(p=2, eps=1e-6)
-        self.compute_multi_distance = nn.PairwiseDistance(p=2, eps=1e-6, keepdim=True)
-        self.prototypes = Prototypes()
 
     def forward(self, feature, label):
         raise NotImplementedError
 
     def compute_dec_loss(self, feature, label):
-        closest_prototype, min_distance = self.assign_prototype(feature.data, label)
+        closest_prototype, min_distance = self.prototypes.assign(feature.data, label)
 
         probability = self.compute_probability(feature, label)
         dce_loss = -probability.log()
 
         return dce_loss, closest_prototype, min_distance
 
-    def assign_prototype(self, feature, label):
-        closest_prototype = feature
-        min_distance = 0.0
-
-        if label not in self.prototypes.dict:
-            self.prototypes.append(feature, label)
-        else:
-            # find closest prototype from prototypes in corresponding class
-            prototypes = self.prototypes.get(label)
-            distances = self.compute_multi_distance(feature, torch.cat(prototypes))
-            min_distance, closest_prototype_index = distances.min(dim=0)
-            min_distance = min_distance.item()
-
-            if min_distance < self.threshold:
-                Prototypes.update(prototypes[closest_prototype_index], feature)
-                closest_prototype = prototypes[closest_prototype_index]
-            else:
-                self.prototypes.append(feature, label)
-
-        return closest_prototype, min_distance
-
     def compute_probability(self, feature, label):
-        distances = self.compute_multi_distance(feature, torch.cat(self.prototypes.features))
+        distances = compute_multi_distance(feature, torch.cat(self.prototypes.features))
         one = (-self.gamma * distances.pow(2)).exp().sum()
 
-        distances = self.compute_multi_distance(feature, torch.cat(self.prototypes.get(label)))
+        distances = compute_multi_distance(feature, torch.cat(self.prototypes.get(label)))
         probability = (-self.gamma * distances.pow(2)).exp().sum()
 
         if one.item() > 0.0:
@@ -212,7 +228,7 @@ class DCELoss(nn.Module):
 
     def predict(self, feature):
         # find closest prototype from all prototypes
-        distances = self.compute_multi_distance(feature, torch.cat(self.prototypes.features))
+        distances = compute_multi_distance(feature, torch.cat(self.prototypes.features))
         min_distance, index = distances.min(dim=0)
 
         predicted_label = self.prototypes[index].label
@@ -220,17 +236,10 @@ class DCELoss(nn.Module):
 
         return predicted_label, probability.item(), min_distance.item()
 
-    def clear(self):
-        self.prototypes.clear()
-
 
 class PairwiseDCELoss(DCELoss):
-    def __init__(self, threshold=10.0, gamma=0.1, tao=10.0, b=1.0, beta=1.0, lambda_=0.1):
-        super(PairwiseDCELoss, self).__init__(threshold, gamma, lambda_)
-
-        self.threshold = threshold
-        self.gamma = gamma
-        self.lambda_ = lambda_
+    def __init__(self, prototypes, gamma=0.1, tao=10.0, b=1.0, beta=1.0, lambda_=0.1):
+        super(PairwiseDCELoss, self).__init__(prototypes, gamma, lambda_)
 
         self.b = b
         self.tao = tao
@@ -240,13 +249,13 @@ class PairwiseDCELoss(DCELoss):
         dce_loss, closest_prototype, min_distance = self.compute_dec_loss(feature, label)
 
         # pairwise loss
-        distance = self.compute_distance(feature, closest_prototype)
+        distance = compute_distance(feature, closest_prototype)
         pw_loss = self._g(self.b - (self.tao - distance.pow(2)))
 
         for l in self.prototypes.dict:
             if l != label:
                 prototypes = torch.cat(self.prototypes.get(l))
-                distance = self.compute_multi_distance(feature, prototypes).min()
+                distance = compute_multi_distance(feature, prototypes).min()
                 pw_loss += self._g(self.b + (self.tao - distance.pow(2)))
 
         return dce_loss + self.lambda_ * pw_loss, min_distance
@@ -256,20 +265,15 @@ class PairwiseDCELoss(DCELoss):
 
 
 class GCPLLoss(DCELoss):
-    def __init__(self, threshold, gamma=0.1, lambda_=0.01):
-        super(GCPLLoss, self).__init__()
+    def __init__(self, prototypes, gamma=0.1, lambda_=0.01):
+        super(GCPLLoss, self).__init__(prototypes, gamma, lambda_)
 
-        self.threshold = threshold
-        self.lambda_ = lambda_
-        self.gamma = gamma
-        self.compute_distance = nn.PairwiseDistance(p=2, eps=1e-6)
-        self.compute_multi_distance = nn.PairwiseDistance(p=2, eps=1e-6, keepdim=True)
         self.log_softmax = nn.LogSoftmax()
         self.prototypes = Prototypes()
 
     def forward(self, feature, label):
         dce_loss, closest_prototype, min_distance = self.compute_dec_loss(feature, label)
-        p_loss = self.compute_distance(feature, closest_prototype).pow(2)
+        p_loss = compute_distance(feature, closest_prototype).pow(2)
 
         return dce_loss + self.lambda_ * p_loss, min_distance
 

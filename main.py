@@ -12,13 +12,8 @@ from sklearn.metrics import accuracy_score, confusion_matrix
 
 
 class Config(object):
-    # dataset_path = 'data/fashion-mnist_train.csv'
-    # pkl_path = "pkl/fashion-mnist.pkl"
-    # tensor_view = (-1, 28, 28)
-    # in_channels = 1
-    # dataset_path = "data/cifar10_train.csv"
+    # read from json
     dataset_path = None
-    running_path = None
     loss_type = None
 
     tensor_view = None
@@ -40,6 +35,12 @@ class Config(object):
     epoch_number = 1
     test_frequency = 1
     train_test_split = None
+
+    # derived
+    running_path = None
+    log_path = None
+    model_path = None
+    prototypes_path = None
 
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
@@ -79,21 +80,22 @@ def run_cpl(config, device, trainset, testset, criterion):
 
     sgd = optim.SGD(net.parameters(), lr=config.learning_rate, momentum=0.9)
 
-    pkl_path = os.path.join(config.running_path, "{}.pkl".format(config.running_path))
-    if os.path.exists(pkl_path):
-        state_dict = torch.load(pkl_path)
+    # load saved model state dict
+    if os.path.exists(config.model_path):
+        state_dict = torch.load(config.model_path)
         try:
             net.load_state_dict(state_dict)
-            logger.info("Load state from file %s.", pkl_path)
+            logger.info("Load state from file '%s'.", config.model_path)
         except RuntimeError:
-            logger.error("Loading state from file %s failed.", pkl_path)
+            logger.error("Loading state from file '%s' failed.", config.model_path)
+
+    # load saved prototypes
+    if os.path.exists(config.prototype_path):
+        pass
 
     # train
     for epoch in range(config.epoch_number):
         logger.info("Epoch number: %d", epoch + 1)
-
-        # train
-        criterion.clear()
 
         running_loss = 0.0
         intra_class_distances = []
@@ -112,7 +114,7 @@ def run_cpl(config, device, trainset, testset, criterion):
 
             logger.debug("[%d, %d] %7.4f, %7.4f", epoch + 1, i + 1, loss.item(), distance)
 
-        torch.save(net.state_dict(), pkl_path)
+        torch.save(net.state_dict(), config.model_path)
 
         detector = models.Detector(intra_class_distances, config.std_coefficient, trainset.label_set)
 
@@ -160,14 +162,14 @@ def run_cel(config, device, trainset, testset):
     cel = nn.CrossEntropyLoss()
     sgd = optim.SGD(net.parameters(), lr=config.learning_rate, momentum=0.9)
 
-    pkl_path = os.path.join(config.running_path, "{}.pkl".format(config.running_path))
-    if os.path.exists(pkl_path):
-        state_dict = torch.load(pkl_path)
+    # load saved model state dict
+    if os.path.exists(config.model_path):
+        state_dict = torch.load(config.model_path)
         try:
             net.load_state_dict(state_dict)
-            logger.info("Load state from file %s.", config.pkl_path)
+            logger.info("Load state from file '%s'.", config.pkl_path)
         except RuntimeError:
-            logger.error("Loading state from file %s failed.", config.pkl_path)
+            logger.error("Loading state from file '%s' failed.", config.pkl_path)
 
     for epoch in range(config.epoch_number):
         logger.info("Epoch number: %d", epoch + 1)
@@ -188,7 +190,7 @@ def run_cel(config, device, trainset, testset):
 
             logger.debug("[%d, %d] %7.4f", epoch + 1, i + 1, loss.item())
 
-        torch.save(net.state_dict(), pkl_path)
+        torch.save(net.state_dict(), config.model_path)
 
         # test
         if (epoch + 1) % config.test_frequency == 0:
@@ -227,20 +229,22 @@ def main():
     with open("{}/{}.json".format(args.config, args.config)) as config_file:
         config = Config(**json.load(config_file))
         config.running_path = args.config
-        log_path = os.path.join(config.running_path, "{}.log".format(config.running_path))
-        pkl_path = os.path.join(config.running_path, "{}.pkl".format(config.running_path))
+        config.log_path = os.path.join(config.running_path, "{}.log".format(config.running_path))
+        config.model_path = os.path.join(config.running_path, "{}.pkl".format(config.running_path))
+        config.prototype_path = os.path.join(config.running_path, "{}_prototype.pkl".format(config.running_path))
 
     if args.epoch:
         config.epoch_number = args.epoch
 
     if args.clear:
         try:
-            os.remove(log_path)
-            os.remove(pkl_path)
+            os.remove(config.log_path)
+            os.remove(config.model_path)
+            os.remove(config.prototype_path)
         except FileNotFoundError:
             pass
 
-    logger = setup_logger(level=logging.DEBUG, filename=log_path)
+    logger = setup_logger(level=logging.DEBUG, filename=config.log_path)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -258,9 +262,9 @@ def main():
     if config.loss_type == 'gcpl':
         gcpl = models.GCPLLoss(threshold=config.threshold, gamma=config.gamma, lambda_=config.lambda_)
         run_cpl(config, device, trainset, testset, gcpl)
-    elif config.loss_type == 'pairwise_dce':
-        pwdce = models.PairwiseDCELoss(threshold=config.threshold, gamma=config.gamma, tao=config.tao, b=config.b, beta=0.5, lambda_=config.lambda_)
-        run_cpl(config, device, trainset, testset, pwdce)
+    elif config.loss_type == 'pdce':
+        pdce = models.PairwiseDCELoss(threshold=config.threshold, gamma=config.gamma, tao=config.tao, b=config.b, beta=0.5, lambda_=config.lambda_)
+        run_cpl(config, device, trainset, testset, pdce)
     elif config.loss_type == 'cel':
         run_cel(config, device, trainset, testset)
     else:
