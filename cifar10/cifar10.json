@@ -1,7 +1,7 @@
 {
   "train": true,
   "test": true,
-  "dataset_path": "data/fashion-mnist_stream.csv",
+  "dataset_path": "data/cifar10_stream.csv",
   "loss_type": "pdce",
   "tensor_view": [
     -1,
