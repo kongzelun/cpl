@@ -185,7 +185,12 @@ class Prototypes(object):
 
     @staticmethod
     def load(pkl_path):
-        return torch.load(pkl_path)
+        prototypes = torch.load(pkl_path)
+
+        if not isinstance(prototypes, Prototypes):
+            raise RuntimeError("Prototypes pickle file format error!")
+
+        return prototypes
 
     def __getitem__(self, item):
         return self.features[item]
@@ -198,23 +203,24 @@ class Prototypes(object):
 
 
 class DCELoss(nn.Module):
-    def __init__(self, prototypes_path=None, gamma=0.1, lambda_=0.1):
+    def __init__(self, threshold, gamma=0.1, lambda_=0.1):
         super(DCELoss, self).__init__()
         self.lambda_ = lambda_
         self.gamma = gamma
+        self.prototypes = Prototypes(threshold)
 
     def forward(self, feature, label):
         raise NotImplementedError
 
-    def compute_dec_loss(self, feature, label):
+    def dec_loss(self, feature, label):
         closest_prototype, min_distance = self.prototypes.assign(feature.data, label)
 
-        probability = self.compute_probability(feature, label)
+        probability = self.probability(feature, label)
         dce_loss = -probability.log()
 
         return dce_loss, closest_prototype, min_distance
 
-    def compute_probability(self, feature, label):
+    def probability(self, feature, label):
         distances = compute_multi_distance(feature, torch.cat(self.prototypes.features))
         one = (-self.gamma * distances.pow(2)).exp().sum()
 
@@ -232,21 +238,33 @@ class DCELoss(nn.Module):
         min_distance, index = distances.min(dim=0)
 
         predicted_label = self.prototypes[index].label
-        probability = self.compute_probability(feature, predicted_label)
+        probability = self.probability(feature, predicted_label)
 
         return predicted_label, probability.item(), min_distance.item()
 
+    def save_prototypes(self, path):
+        self.prototypes.save(path)
+
+    def load_prototypes(self, path):
+        self.prototypes = Prototypes.load(path)
+
+    def clear_prototypes(self):
+        self.prototypes.clear()
+
+    def set_threshold(self, value):
+        self.prototypes.threshold = value
+
 
 class PairwiseDCELoss(DCELoss):
-    def __init__(self, prototypes, gamma=0.1, tao=10.0, b=1.0, beta=1.0, lambda_=0.1):
-        super(PairwiseDCELoss, self).__init__(prototypes, gamma, lambda_)
+    def __init__(self, threshold, gamma=0.1, tao=10.0, b=1.0, beta=1.0, lambda_=0.1):
+        super(PairwiseDCELoss, self).__init__(threshold, gamma, lambda_)
 
         self.b = b
         self.tao = tao
         self.beta = beta
 
     def forward(self, feature, label):
-        dce_loss, closest_prototype, min_distance = self.compute_dec_loss(feature, label)
+        dce_loss, closest_prototype, min_distance = self.dec_loss(feature, label)
 
         # pairwise loss
         distance = compute_distance(feature, closest_prototype)
@@ -265,14 +283,11 @@ class PairwiseDCELoss(DCELoss):
 
 
 class GCPLLoss(DCELoss):
-    def __init__(self, prototypes, gamma=0.1, lambda_=0.01):
-        super(GCPLLoss, self).__init__(prototypes, gamma, lambda_)
-
-        self.log_softmax = nn.LogSoftmax()
-        self.prototypes = Prototypes()
+    def __init__(self, threshold, gamma=0.1, lambda_=0.01):
+        super(GCPLLoss, self).__init__(threshold, gamma, lambda_)
 
     def forward(self, feature, label):
-        dce_loss, closest_prototype, min_distance = self.compute_dec_loss(feature, label)
+        dce_loss, closest_prototype, min_distance = self.dec_loss(feature, label)
         p_loss = compute_distance(feature, closest_prototype).pow(2)
 
         return dce_loss + self.lambda_ * p_loss, min_distance
@@ -285,7 +300,7 @@ class Detector(object):
         self.known_labels = known_labels
         self.average_distances = {l: np.average(self.distances[self.distances['label'] == l]['distance']) for l in self.known_labels}
         self.std_distances = {l: self.distances[self.distances['label'] == l]['distance'].std() for l in self.known_labels}
-        self.thresholds = {l: self.average_distances[l] + self.std_coefficient * self.std_distances[l] for l in self.known_labels}
+        self.thresholds = {l: self.average_distances[l] + (self.std_coefficient * self.std_distances[l]) for l in self.known_labels}
         self.results = None
 
     def __call__(self, predicted_label, probability, distance):

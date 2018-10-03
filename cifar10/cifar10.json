@@ -5,10 +5,10 @@
   "loss_type": "pdce",
   "tensor_view": [
     -1,
-    28,
-    28
+    32,
+    32
   ],
-  "in_channels": 1,
+  "in_channels": 3,
   "layers": 10,
   "learning_rate": 0.001,
   "threshold": 10.0,
@@ -16,8 +16,8 @@
   "tao": 10.0,
   "b": 3.0,
   "lambda_": 0.01,
-  "std_coefficient": 1.5,
+  "std_coefficient": 1.0,
   "train_test_split": 6000,
-  "epoch_number": 1,
-  "test_frequency": 1
+  "epoch_number": 50,
+  "test_frequency": 2
 }

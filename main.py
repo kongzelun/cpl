@@ -13,6 +13,9 @@ from sklearn.metrics import accuracy_score, confusion_matrix
 
 class Config(object):
     # read from json
+    train = True
+    test = True
+
     dataset_path = None
     loss_type = None
 
@@ -42,6 +45,8 @@ class Config(object):
     model_path = None
     prototypes_path = None
 
+    device = "cpu"
+
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
         self.values = kwargs
@@ -68,15 +73,22 @@ def setup_logger(level=logging.DEBUG, filename=None):
     return logger
 
 
-def run_cpl(config, device, trainset, testset, criterion):
+def run(config, trainset, testset):
     logger = logging.getLogger(__name__)
 
     trainloader = DataLoader(dataset=trainset, batch_size=1, shuffle=True, num_workers=0)
     testloader = DataLoader(dataset=testset, batch_size=1, shuffle=False, num_workers=0)
 
     # net = models.CNNNet(device=device)
-    net = models.DenseNet(device=device, in_channels=config.in_channels, number_layers=config.layers, growth_rate=12, drop_rate=0.0)
+    net = models.DenseNet(device=torch.device(config.device), in_channels=config.in_channels, number_layers=config.layers, growth_rate=12, drop_rate=0.0)
     logger.info("DenseNet Channels: %d\n", net.channels)
+
+    if config.loss_type == 'gcpl':
+        criterion = models.GCPLLoss(threshold=config.threshold, gamma=config.gamma, lambda_=config.lambda_)
+    elif config.loss_type == 'pdce':
+        criterion = models.PairwiseDCELoss(threshold=config.threshold, gamma=config.gamma, tao=config.tao, b=config.b, beta=0.5, lambda_=config.lambda_)
+    else:
+        raise RuntimeError('Cannot find "{}" loss type.'.format(config.loss_type))
 
     sgd = optim.SGD(net.parameters(), lr=config.learning_rate, momentum=0.9)
 
@@ -85,58 +97,71 @@ def run_cpl(config, device, trainset, testset, criterion):
         state_dict = torch.load(config.model_path)
         try:
             net.load_state_dict(state_dict)
-            logger.info("Load state from file '%s'.", config.model_path)
+            logger.info("Load model from file '%s'.", config.model_path)
         except RuntimeError:
-            logger.error("Loading state from file '%s' failed.", config.model_path)
+            logger.error("Loading model from file '%s' failed.", config.model_path)
 
     # load saved prototypes
-    if os.path.exists(config.prototype_path):
-        pass
+    if os.path.exists(config.prototypes_path):
+        try:
+            criterion.load_prototypes(config.prototypes_path)
+            logger.info("Load prototypes from file '%s'.", config.model_path)
+        except RuntimeError:
+            logger.error("Loading prototypes from file '%s' failed.", config.model_path)
 
-    # train
     for epoch in range(config.epoch_number):
         logger.info("Epoch number: %d", epoch + 1)
 
-        running_loss = 0.0
         intra_class_distances = []
 
-        for i, (feature, label) in enumerate(trainloader):
-            feature, label = feature.to(net.device), label.item()
-            sgd.zero_grad()
-            feature = net(feature).view(1, -1)
-            loss, distance = criterion(feature, label)
-            loss.backward()
-            sgd.step()
+        # train
+        if config.train:
+            running_loss = 0.0
+            distance_sum = 0.0
 
-            running_loss += loss.item()
+            criterion.clear_prototypes()
 
-            intra_class_distances.append((label, distance))
+            for i, (feature, label) in enumerate(trainloader):
+                feature, label = feature.to(net.device), label.item()
+                sgd.zero_grad()
+                feature = net(feature).view(1, -1)
+                loss, distance = criterion(feature, label)
+                loss.backward()
+                sgd.step()
 
-            logger.debug("[%d, %d] %7.4f, %7.4f", epoch + 1, i + 1, loss.item(), distance)
+                running_loss += loss.item()
 
-        torch.save(net.state_dict(), config.model_path)
+                distance_sum += distance
+                intra_class_distances.append((label, distance))
 
+                logger.debug("[%d, %d] %7.4f, %7.4f", epoch + 1, i + 1, loss.item(), distance)
+
+            config.threshold = distance_sum / len(trainset) * 2
+            criterion.set_threshold(config.threshold)
+
+            torch.save(net.state_dict(), config.model_path)
+            criterion.save_prototypes(config.prototypes_path)
+
+            logger.info("Prototypes Count: %d", len(criterion.prototypes))
+
+        # test
         detector = models.Detector(intra_class_distances, config.std_coefficient, trainset.label_set)
-
-        logger.info("Prototypes Count: %d", len(criterion.prototypes))
-
         logger.info("Distance Average: %s", detector.average_distances)
         logger.info("Distance Std: %s", detector.std_distances)
         logger.info("Distance Threshold: %s", detector.thresholds)
 
-        # test
         if (epoch + 1) % config.test_frequency == 0:
 
             detection_results = []
 
-            for j, (feature, label) in enumerate(testloader):
+            for i, (feature, label) in enumerate(testloader):
                 feature, label = net(feature.to(net.device)).view(1, -1), label.item()
                 predicted_label, probability, distance = criterion.predict(feature)
                 novelty = detector(predicted_label, probability, distance)
 
                 detection_results.append((label, predicted_label, probability, distance, novelty))
 
-                logger.debug("%5d: %d, %d, %7.4f, %7.4f, %s", j + 1, label, predicted_label, probability, distance, novelty)
+                logger.debug("%5d: %d, %d, %7.4f, %7.4f, %s", i + 1, label, predicted_label, probability, distance, novelty)
 
             precision, recall = detector.evaluate(detection_results)
 
@@ -148,13 +173,14 @@ def run_cpl(config, device, trainset, testset, criterion):
             logger.info("Confusion Matrix: \n%s\n", cm)
 
 
-def run_cel(config, device, trainset, testset):
+def run_cel(config, trainset, testset):
     logger = logging.getLogger(__name__)
 
     trainloader = DataLoader(dataset=trainset, batch_size=1, shuffle=True, num_workers=0)
     testloader = DataLoader(dataset=testset, batch_size=1, shuffle=False, num_workers=0)
 
-    # net = models.CNNNet(device=device)
+    device = torch.device(config.device)
+
     net = models.DenseNet(device=device, in_channels=config.in_channels, number_layers=config.layers, growth_rate=12, drop_rate=0.0)
     logger.info("DenseNet Channels: %d\n", net.channels)
     fc_net = models.LinearNet(device=device, in_features=net.channels * (config.tensor_view[1] // 8) * (config.tensor_view[2] // 8))
@@ -231,22 +257,22 @@ def main():
         config.running_path = args.config
         config.log_path = os.path.join(config.running_path, "{}.log".format(config.running_path))
         config.model_path = os.path.join(config.running_path, "{}.pkl".format(config.running_path))
-        config.prototype_path = os.path.join(config.running_path, "{}_prototype.pkl".format(config.running_path))
+        config.prototypes_path = os.path.join(config.running_path, "{}_prototype.pkl".format(config.running_path))
 
     if args.epoch:
         config.epoch_number = args.epoch
+
+    config.device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
     if args.clear:
         try:
             os.remove(config.log_path)
             os.remove(config.model_path)
-            os.remove(config.prototype_path)
+            os.remove(config.prototypes_path)
         except FileNotFoundError:
             pass
 
     logger = setup_logger(level=logging.DEBUG, filename=config.log_path)
-
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     dataset = np.loadtxt(config.dataset_path, delimiter=',')
     np.random.shuffle(dataset[:config.train_test_split])
@@ -259,16 +285,10 @@ def main():
     logger.info("Trainset size: %d", len(trainset))
     logger.info("Testset size: %d\n", len(testset))
 
-    if config.loss_type == 'gcpl':
-        gcpl = models.GCPLLoss(threshold=config.threshold, gamma=config.gamma, lambda_=config.lambda_)
-        run_cpl(config, device, trainset, testset, gcpl)
-    elif config.loss_type == 'pdce':
-        pdce = models.PairwiseDCELoss(threshold=config.threshold, gamma=config.gamma, tao=config.tao, b=config.b, beta=0.5, lambda_=config.lambda_)
-        run_cpl(config, device, trainset, testset, pdce)
-    elif config.loss_type == 'cel':
-        run_cel(config, device, trainset, testset)
+    if config.loss_type == 'cel':
+        run_cel(config, trainset, testset)
     else:
-        raise RuntimeError('Cannot find "{}" loss type.'.format(config.loss_type))
+        run(config, trainset, testset)
 
 
 if __name__ == '__main__':
