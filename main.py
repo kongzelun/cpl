@@ -2,6 +2,7 @@ import os
 import argparse
 import json
 import logging
+import time
 import numpy as np
 import torch
 import torch.nn as nn
@@ -44,6 +45,7 @@ class Config(object):
     log_path = None
     model_path = None
     prototypes_path = None
+    intra_class_distances_path = None
 
     device = "cpu"
 
@@ -81,7 +83,7 @@ def run(config, trainset, testset):
 
     # net = models.CNNNet(device=device)
     net = models.DenseNet(device=torch.device(config.device), in_channels=config.in_channels, number_layers=config.layers, growth_rate=12, drop_rate=0.0)
-    logger.info("DenseNet Channels: %d\n", net.channels)
+    logger.info("DenseNet Channels: %d", net.channels)
 
     if config.loss_type == 'gcpl':
         criterion = models.GCPLLoss(threshold=config.threshold, gamma=config.gamma, lambda_=config.lambda_)
@@ -144,10 +146,15 @@ def run(config, trainset, testset):
 
             torch.save(net.state_dict(), config.model_path)
             criterion.save_prototypes(config.prototypes_path)
+            torch.save(intra_class_distances, config.intra_class_distances_path)
 
             logger.info("Prototypes Count: %d", len(criterion.prototypes))
+            logger.info("Prototypes Threshold: %d", criterion.prototypes.threshold)
 
         # test
+        if not intra_class_distances:
+            intra_class_distances = torch.load(config.intra_class_distances_path)
+
         detector = models.Detector(intra_class_distances, config.std_coefficient, trainset.label_set)
         logger.info("Distance Average: %s", detector.average_distances)
         logger.info("Distance Std: %s", detector.std_distances)
@@ -160,20 +167,28 @@ def run(config, trainset, testset):
             for i, (feature, label) in enumerate(testloader):
                 feature, label = net(feature.to(net.device)).view(1, -1), label.item()
                 predicted_label, probability, distance = criterion.predict(feature)
-                novelty = detector(predicted_label, probability, distance)
+                detected_novelty = detector(predicted_label, probability, distance)
+                real_novelty = label not in trainset.label_set
 
-                detection_results.append((label, predicted_label, probability, distance, novelty))
+                detection_results.append((label, predicted_label, probability, distance, real_novelty, detected_novelty))
 
-                logger.debug("%5d: %d, %d, %7.4f, %7.4f, %s", i + 1, label, predicted_label, probability, distance, novelty)
+                logger.debug("%5d: %d, %d, %7.4f, %7.4f, %s, %s",
+                             i + 1, label, predicted_label, probability, distance, real_novelty, detected_novelty)
 
-            precision, recall = detector.evaluate(detection_results)
+            true_positive, false_positive, false_negative = detector.evaluate(detection_results)
 
-            cm = confusion_matrix(detector.results['true label'], detector.results['predicted label'], sorted(list(testset.label_set)))
+            precision = true_positive / (true_positive + false_positive)
+            recall = true_positive / (true_positive + false_negative)
 
-            logger.info("Accuracy: %7.4f", accuracy_score(detector.results['true label'], detector.results['predicted label']))
+            cm = confusion_matrix(detector.results['true_label'], detector.results['predicted_label'], sorted(list(testset.label_set)))
+
+            logger.info("Accuracy: %7.4f", accuracy_score(detector.results['true_label'], detector.results['predicted_label']))
+            logger.info("True Positive: %d", true_positive)
+            logger.info("False Positive: %d", false_positive)
+            logger.info("False Negative: %d", false_negative)
             logger.info("Precision: %7.4f", precision)
             logger.info("Recall: %7.4f", recall)
-            logger.info("Confusion Matrix: \n%s\n", cm)
+            logger.info("Confusion Matrix: \n%s", cm)
 
 
 def run_cel(config, trainset, testset):
@@ -185,7 +200,7 @@ def run_cel(config, trainset, testset):
     device = torch.device(config.device)
 
     net = models.DenseNet(device=device, in_channels=config.in_channels, number_layers=config.layers, growth_rate=12, drop_rate=0.0)
-    logger.info("DenseNet Channels: %d\n", net.channels)
+    logger.info("DenseNet Channels: %d", net.channels)
     fc_net = models.LinearNet(device=device, in_features=net.channels * (config.tensor_view[1] // 8) * (config.tensor_view[2] // 8))
 
     cel = nn.CrossEntropyLoss()
@@ -222,7 +237,7 @@ def run_cel(config, trainset, testset):
         torch.save(net.state_dict(), config.model_path)
 
         # test
-        if (epoch + 1) % config.test_frequency == 0:
+        if config.test and (epoch + 1) % config.test_frequency == 0:
 
             labels_true = []
             labels_predicted = []
@@ -240,7 +255,7 @@ def run_cel(config, trainset, testset):
             cm = confusion_matrix(labels_true, labels_predicted, sorted(list(testset.label_set)))
 
             logger.info("Accuracy: %7.4f", accuracy_score(labels_true, labels_predicted))
-            logger.info("Confusion Matrix: \n%s\n", cm)
+            logger.info("Confusion Matrix: \n%s", cm)
 
 
 def main():
@@ -260,7 +275,8 @@ def main():
         config.running_path = args.config
         config.log_path = os.path.join(config.running_path, "{}.log".format(config.running_path))
         config.model_path = os.path.join(config.running_path, "{}.pkl".format(config.running_path))
-        config.prototypes_path = os.path.join(config.running_path, "{}_prototype.pkl".format(config.running_path))
+        config.prototypes_path = os.path.join(config.running_path, "{}_prototypes.pkl".format(config.running_path))
+        config.intra_class_distances_path = os.path.join(config.running_path, "{}_intra_class_distances.pkl".format(config.running_path))
 
     if args.epoch:
         config.epoch_number = args.epoch
@@ -272,6 +288,7 @@ def main():
             os.remove(config.log_path)
             os.remove(config.model_path)
             os.remove(config.prototypes_path)
+            os.remove(config.intra_class_distances_path)
         except FileNotFoundError:
             pass
 
@@ -282,16 +299,21 @@ def main():
     np.random.shuffle(dataset[config.train_test_split:])
 
     trainset = models.DataSet(dataset[:config.train_test_split], config.tensor_view)
-    testset = models.DataSet(dataset[config.train_test_split:], config.tensor_view)
+    testset = models.DataSet(dataset[config.train_test_split:10000], config.tensor_view)
 
+    logger.info("********************************************************************************")
     logger.info("%s", config)
     logger.info("Trainset size: %d", len(trainset))
-    logger.info("Testset size: %d\n", len(testset))
+    logger.info("Testset size: %d", len(testset))
+
+    start_time = time.time()
 
     if config.loss_type == 'cel':
         run_cel(config, trainset, testset)
     else:
         run(config, trainset, testset)
+
+    logger.info("------ %.3fs ------", time.time() - start_time)
 
 
 if __name__ == '__main__':

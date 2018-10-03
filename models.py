@@ -121,12 +121,23 @@ class LinearNet(nn.Module):
         return out
 
 
+class Prototype(object):
+    def __init__(self, feature, label):
+        self.feature = feature
+        self.label = label
+        self.sample_count = 1
+
+    def update(self, feature):
+        prototype = (self.feature * self.sample_count + feature) / (self.sample_count + 1)
+        prototype.sample_count = self.sample_count + 1
+
+
 class Prototypes(object):
     def __init__(self, threshold):
         super(Prototypes, self).__init__()
 
-        self.features = []
-        self.dict = {}
+        self._list = []
+        self._dict = {}
         self.threshold = threshold
 
     def assign(self, feature, label):
@@ -137,48 +148,44 @@ class Prototypes(object):
         :return:
         """
 
-        closest_prototype = feature
+        closest_prototype = Prototype(feature, label)
         min_distance = 0.0
 
-        if label not in self.dict:
-            self.append(feature, label)
+        if label not in self._dict:
+            self._append(feature, label)
         else:
             # find closest prototype from prototypes in corresponding class
-            prototypes = self.dict[label]
+            prototypes = self.get(label)
             distances = compute_multi_distance(feature, torch.cat(prototypes))
             min_distance, closest_prototype_index = distances.min(dim=0)
             min_distance = min_distance.item()
 
             if min_distance < self.threshold:
-                Prototypes.update(prototypes[closest_prototype_index], feature)
-                closest_prototype = prototypes[closest_prototype_index]
+                closest_prototype = self._dict[label][closest_prototype_index]
+                closest_prototype.update(feature)
             else:
-                self.append(feature, label)
+                self._append(feature, label)
 
         return closest_prototype, min_distance
 
-    def append(self, feature, label):
-        setattr(feature, 'label', label)
-        setattr(feature, 'sample_count', 1)
-        self.features.append(feature)
+    def _append(self, feature, label):
+        # setattr(feature, 'label', label)
+        # setattr(feature, 'sample_count', 1)
+        prototype = Prototype(feature, label)
+        self._list.append(prototype)
 
-        if label not in self.dict:
-            self.dict[label] = []
+        if label not in self._dict:
+            self._dict[label] = []
 
-        self.dict[label].append(feature)
-
-    @staticmethod
-    def update(prototype, feature):
-        count = prototype.sample_count
-        prototype = (prototype * count + feature) / (count + 1)
-        prototype.sample_count = count + 1
+        self._dict[label].append(prototype)
 
     def clear(self):
-        self.features.clear()
-        self.dict.clear()
+        self._list.clear()
+        self._dict.clear()
 
-    def get(self, label):
-        return self.dict[label]
+    def get(self, label=None):
+        collection = self._dict[label] if label else self._list
+        return list(map(lambda p: p.feature, collection))
 
     def save(self, pkl_path):
         torch.save(self, pkl_path)
@@ -193,13 +200,13 @@ class Prototypes(object):
         return prototypes
 
     def __getitem__(self, item):
-        return self.features[item]
+        return self._list[item]
 
     def __setitem__(self, key, value):
-        self.features[key] = value
+        self._list[key] = value
 
     def __len__(self):
-        return len(self.features)
+        return len(self._list)
 
 
 class DCELoss(nn.Module):
@@ -208,6 +215,7 @@ class DCELoss(nn.Module):
         self.lambda_ = lambda_
         self.gamma = gamma
         self.prototypes = Prototypes(threshold)
+        self.softmax = nn.Softmax(dim=0)
 
     def forward(self, feature, label):
         raise NotImplementedError
@@ -221,20 +229,23 @@ class DCELoss(nn.Module):
         return dce_loss, closest_prototype, min_distance
 
     def probability(self, feature, label):
-        distances = compute_multi_distance(feature, torch.cat(self.prototypes.features))
-        one = (-self.gamma * distances.pow(2)).exp().sum()
+        distances = compute_multi_distance(feature, torch.cat(self.prototypes.get()))
+        # one = (-self.gamma * distances.pow(2)).exp().sum()
+        #
+        # distances = compute_multi_distance(feature, torch.cat(self.prototypes.get(label)))
+        # probability = (-self.gamma * distances.pow(2)).exp().sum()
 
-        distances = compute_multi_distance(feature, torch.cat(self.prototypes.get(label)))
-        probability = (-self.gamma * distances.pow(2)).exp().sum()
+        # if one.item() > 0.0:
+        #     probability /= one
 
-        if one.item() > 0.0:
-            probability /= one
+        probabilities = self.softmax(self.prototypes.threshold - distances)
+        probability = probabilities.max()
 
         return probability
 
     def predict(self, feature):
         # find closest prototype from all prototypes
-        distances = compute_multi_distance(feature, torch.cat(self.prototypes.features))
+        distances = compute_multi_distance(feature, torch.cat(self.prototypes.get()))
         min_distance, index = distances.min(dim=0)
 
         predicted_label = self.prototypes[index].label
@@ -267,10 +278,10 @@ class PairwiseDCELoss(DCELoss):
         dce_loss, closest_prototype, min_distance = self.dec_loss(feature, label)
 
         # pairwise loss
-        distance = compute_distance(feature, closest_prototype)
+        distance = compute_distance(feature, closest_prototype.feature)
         pw_loss = self._g(self.b - (self.tao - distance.pow(2)))
 
-        for l in self.prototypes.dict:
+        for l in self.prototypes._dict:
             if l != label:
                 prototypes = torch.cat(self.prototypes.get(l))
                 distance = compute_multi_distance(feature, prototypes).min()
@@ -305,25 +316,32 @@ class Detector(object):
 
     def __call__(self, predicted_label, probability, distance):
         novelty = False
-        if distance > self.thresholds[predicted_label]:
-            novelty = True
-        elif probability < 0.9:
+        if distance > self.thresholds[predicted_label] and probability < 0.95:
             novelty = True
 
         return novelty
 
     def evaluate(self, results):
-        self.results = np.array(results, dtype=[('true label', np.int32), ('predicted label', np.int32), ('probability', np.float32), ('distance', np.float32), ('novelty', np.bool)])
+        self.results = np.array(results, dtype=[
+            ('true_label', np.int32),
+            ('predicted_label', np.int32),
+            ('probability', np.float32),
+            ('distance', np.float32),
+            ('real_novelty', np.bool),
+            ('detected_novelty', np.bool)
+        ])
 
-        total_novelties = self.results[~np.isin(self.results['true label'], list(self.known_labels))]
-        detected_novelties = self.results[self.results['novelty'] == np.True_]
-        detected_real_novelties = detected_novelties[~np.isin(detected_novelties['true label'], list(self.known_labels))]
+        # total_novelties = self.results[~np.isin(self.results['true label'], list(self.known_labels))]
+        real_novelties = self.results[self.results['real_novelty']]
+        detected_novelties = self.results[self.results['detected_novelty']]
+        # detected_real_novelties = detected_novelties[~np.isin(detected_novelties['true label'], list(self.known_labels))]
+        detected_real_novelties = self.results[self.results['detected_novelty'] & self.results['real_novelty']]
 
         true_positive = len(detected_real_novelties)
         false_positive = len(detected_novelties) - len(detected_real_novelties)
-        false_negative = len(total_novelties) - len(detected_real_novelties)
+        false_negative = len(real_novelties) - len(detected_real_novelties)
 
-        precision = true_positive / (true_positive + false_positive)
-        recall = true_positive / (true_positive + false_negative)
+        # precision = true_positive / (true_positive + false_positive)
+        # recall = true_positive / (true_positive + false_negative)
 
-        return precision, recall
+        return true_positive, false_positive, false_negative

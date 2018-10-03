@@ -1,6 +1,6 @@
 {
-  "dataset_path": "data/fashion-mnist_stream.csv",
-  "loss_type": "pairwise_dce",
+  "dataset_path": "data/lsun_stream.csv",
+  "loss_type": "pdce",
   "tensor_view": [
     -1,
     32,
@@ -9,13 +9,13 @@
   "in_channels": 4,
   "layers": 10,
   "learning_rate": 0.001,
-  "threshold": 10.0,
+  "threshold": 12.5,
   "gamma": 0.3,
-  "tao": 10.0,
+  "tao": 12.5,
   "b": 3.0,
   "lambda_": 0.01,
   "std_coefficient": 0.25,
   "train_test_split": 6000,
   "epoch_number": 50,
-  "test_frequency": 1
+  "test_frequency": 10
 }
