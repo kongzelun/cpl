@@ -184,7 +184,7 @@ class Prototypes(object):
         self._dict.clear()
 
     def get(self, label=None):
-        collection = self._dict[label] if label else self._list
+        collection = self._list if label is None else self._dict[label]
         return list(map(lambda p: p.feature, collection))
 
     def save(self, pkl_path):
@@ -230,18 +230,17 @@ class DCELoss(nn.Module):
 
     def probability(self, feature, label):
         distances = compute_multi_distance(feature, torch.cat(self.prototypes.get()))
-        # one = (-self.gamma * distances.pow(2)).exp().sum()
-        #
-        # distances = compute_multi_distance(feature, torch.cat(self.prototypes.get(label)))
-        # probability = (-self.gamma * distances.pow(2)).exp().sum()
+        # one = (-self.gamma * (self.prototypes.threshold - distances)).exp().sum()
+        one = (self.prototypes.threshold - distances).exp().sum()
 
-        # if one.item() > 0.0:
-        #     probability /= one
+        distances = compute_multi_distance(feature, torch.cat(self.prototypes.get(label)))
+        # prob = (-self.gamma * (self.prototypes.threshold - distances)).exp().sum()
+        prob = (self.prototypes.threshold - distances).exp().sum()
 
-        probabilities = self.softmax(self.prototypes.threshold - distances)
-        probability = probabilities.max()
+        if one.item() > 0.0:
+            prob /= one
 
-        return probability
+        return prob
 
     def predict(self, feature):
         # find closest prototype from all prototypes
@@ -279,13 +278,13 @@ class PairwiseDCELoss(DCELoss):
 
         # pairwise loss
         distance = compute_distance(feature, closest_prototype.feature)
-        pw_loss = self._g(self.b - (self.tao - distance.pow(2)))
+        pw_loss = self._g(self.b - (self.tao - distance))
 
         for l in self.prototypes._dict:
             if l != label:
                 prototypes = torch.cat(self.prototypes.get(l))
                 distance = compute_multi_distance(feature, prototypes).min()
-                pw_loss += self._g(self.b + (self.tao - distance.pow(2)))
+                pw_loss += self._g(self.b + (self.tao - distance))
 
         return dce_loss + self.lambda_ * pw_loss, min_distance
 

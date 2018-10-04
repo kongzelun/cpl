@@ -18,6 +18,6 @@
   "lambda_": 0.01,
   "std_coefficient": 1.0,
   "train_test_split": 6000,
-  "epoch_number": 50,
-  "test_frequency": 10
+  "epoch_number": 10,
+  "test_frequency": 1
 }

@@ -138,10 +138,10 @@ def run(config, trainset, testset):
 
                 logger.debug("[%d, %d] %7.4f, %7.4f", epoch + 1, i + 1, loss.item(), distance)
 
-            average_distance = distance_sum / len(trainset)
-            new_threshold = average_distance * 2
-            if new_threshold < config.threshold:
-                config.threshold = new_threshold
+            distances = np.array(intra_class_distances, dtype=[('label', np.int32), ('distance', np.float32)])
+            average_distance = np.average(distances['distance'])
+            std_distance = distances['distance'].std()
+            config.threshold = average_distance + std_distance
             criterion.set_threshold(config.threshold)
 
             torch.save(net.state_dict(), config.model_path)
