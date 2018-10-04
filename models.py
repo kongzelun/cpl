@@ -210,10 +210,9 @@ class Prototypes(object):
 
 
 class DCELoss(nn.Module):
-    def __init__(self, threshold, gamma=0.1, lambda_=0.1):
+    def __init__(self, threshold, lambda_=0.1):
         super(DCELoss, self).__init__()
         self.lambda_ = lambda_
-        self.gamma = gamma
         self.prototypes = Prototypes(threshold)
         self.softmax = nn.Softmax(dim=0)
 
@@ -230,12 +229,10 @@ class DCELoss(nn.Module):
 
     def probability(self, feature, label):
         distances = compute_multi_distance(feature, torch.cat(self.prototypes.get()))
-        # one = (-self.gamma * (self.prototypes.threshold - distances)).exp().sum()
-        one = (self.prototypes.threshold - distances).exp().sum()
+        one = (distances.neg().add(self.prototypes.threshold)).exp().sum()
 
         distances = compute_multi_distance(feature, torch.cat(self.prototypes.get(label)))
-        # prob = (-self.gamma * (self.prototypes.threshold - distances)).exp().sum()
-        prob = (self.prototypes.threshold - distances).exp().sum()
+        prob = (distances.neg().add(self.prototypes.threshold)).exp().sum()
 
         if one.item() > 0.0:
             prob /= one
@@ -266,8 +263,8 @@ class DCELoss(nn.Module):
 
 
 class PairwiseDCELoss(DCELoss):
-    def __init__(self, threshold, gamma=0.1, tao=10.0, b=1.0, beta=1.0, lambda_=0.1):
-        super(PairwiseDCELoss, self).__init__(threshold, gamma, lambda_)
+    def __init__(self, threshold, tao=10.0, b=1.0, beta=1.0, lambda_=0.1):
+        super(PairwiseDCELoss, self).__init__(threshold, lambda_)
 
         self.b = b
         self.tao = tao
@@ -291,10 +288,16 @@ class PairwiseDCELoss(DCELoss):
     def _g(self, z):
         return (1 + (self.beta * z).exp()).log() / self.beta
 
+    def set_tao(self, value):
+        self.tao = value
+
+    def set_b(self, value):
+        self.b = value
+
 
 class GCPLLoss(DCELoss):
-    def __init__(self, threshold, gamma=0.1, lambda_=0.01):
-        super(GCPLLoss, self).__init__(threshold, gamma, lambda_)
+    def __init__(self, threshold, lambda_=0.01):
+        super(GCPLLoss, self).__init__(threshold, lambda_)
 
     def forward(self, feature, label):
         dce_loss, closest_prototype, min_distance = self.dec_loss(feature, label)
@@ -315,7 +318,7 @@ class Detector(object):
 
     def __call__(self, predicted_label, probability, distance):
         novelty = False
-        if distance > self.thresholds[predicted_label] and probability < 0.95:
+        if distance > self.thresholds[predicted_label] and probability < 0.9:
             novelty = True
 
         return novelty

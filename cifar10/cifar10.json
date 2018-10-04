@@ -1,5 +1,5 @@
 {
-  "train": true,
+  "train": false,
   "test": true,
   "dataset_path": "data/cifar10_stream.csv",
   "loss_type": "pdce",
@@ -12,12 +12,11 @@
   "layers": 10,
   "learning_rate": 0.001,
   "threshold": 10.0,
-  "gamma": 0.3,
   "tao": 10.0,
-  "b": 3.0,
+  "b": 1.0,
   "lambda_": 0.01,
-  "std_coefficient": 1.0,
+  "std_coefficient": -1.0,
   "train_test_split": 6000,
-  "epoch_number": 10,
-  "test_frequency": 1
+  "epoch_number": 100,
+  "test_frequency": 5
 }

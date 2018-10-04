@@ -27,11 +27,8 @@ class Config(object):
     learning_rate = None
 
     threshold = None
-    gamma = None
-
     tao = None
     b = None
-
     lambda_ = None
 
     std_coefficient = None
@@ -86,9 +83,9 @@ def run(config, trainset, testset):
     logger.info("DenseNet Channels: %d", net.channels)
 
     if config.loss_type == 'gcpl':
-        criterion = models.GCPLLoss(threshold=config.threshold, gamma=config.gamma, lambda_=config.lambda_)
+        criterion = models.GCPLLoss(threshold=config.threshold, lambda_=config.lambda_)
     elif config.loss_type == 'pdce':
-        criterion = models.PairwiseDCELoss(threshold=config.threshold, gamma=config.gamma, tao=config.tao, b=config.b, beta=0.5, lambda_=config.lambda_)
+        criterion = models.PairwiseDCELoss(threshold=config.threshold, tao=config.tao, b=config.b, beta=0.5, lambda_=config.lambda_)
     else:
         raise RuntimeError('Cannot find "{}" loss type.'.format(config.loss_type))
 
@@ -112,12 +109,12 @@ def run(config, trainset, testset):
             logger.error("Loading prototypes from file '%s' failed.", config.model_path)
 
     for epoch in range(config.epoch_number):
-        logger.info("Epoch number: %d", epoch + 1)
 
         intra_class_distances = []
-
         # train
         if config.train:
+            logger.info("Epoch number: %d", epoch + 1)
+
             running_loss = 0.0
             distance_sum = 0.0
 
@@ -141,15 +138,21 @@ def run(config, trainset, testset):
             distances = np.array(intra_class_distances, dtype=[('label', np.int32), ('distance', np.float32)])
             average_distance = np.average(distances['distance'])
             std_distance = distances['distance'].std()
-            config.threshold = average_distance + std_distance
+
+            config.threshold = (average_distance + std_distance).item()
+            config.tao = average_distance.item()
+            config.b = std_distance.item()
+
             criterion.set_threshold(config.threshold)
+            criterion.set_tao(config.tao)
+            criterion.set_b(config.b)
 
             torch.save(net.state_dict(), config.model_path)
             criterion.save_prototypes(config.prototypes_path)
             torch.save(intra_class_distances, config.intra_class_distances_path)
 
             logger.info("Prototypes Count: %d", len(criterion.prototypes))
-            logger.info("Prototypes Threshold: %d", criterion.prototypes.threshold)
+            logger.info("Prototypes Threshold: %7.4f", criterion.prototypes.threshold)
 
         # test
         if not intra_class_distances:
@@ -160,7 +163,7 @@ def run(config, trainset, testset):
         logger.info("Distance Std: %s", detector.std_distances)
         logger.info("Distance Threshold: %s", detector.thresholds)
 
-        if (epoch + 1) % config.test_frequency == 0:
+        if (epoch + 1) % config.test_frequency == 0 or not config.train:
 
             detection_results = []
 
@@ -259,6 +262,8 @@ def run_cel(config, trainset, testset):
 
 
 def main():
+    start_time = time.time()
+
     parser = argparse.ArgumentParser()
 
     parser.add_argument('-c', '--config', type=str, help="Config directory path.", required=True)
@@ -281,6 +286,9 @@ def main():
     if args.epoch:
         config.epoch_number = args.epoch
 
+    if not config.train:
+        config.epoch_number = 1
+
     config.device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
     if args.clear:
@@ -289,6 +297,7 @@ def main():
             os.remove(config.model_path)
             os.remove(config.prototypes_path)
             os.remove(config.intra_class_distances_path)
+            os.remove("{}/config_dump.json".format(args.config, args.config))
         except FileNotFoundError:
             pass
 
@@ -306,12 +315,13 @@ def main():
     logger.info("Trainset size: %d", len(trainset))
     logger.info("Testset size: %d", len(testset))
 
-    start_time = time.time()
-
     if config.loss_type == 'cel':
         run_cel(config, trainset, testset)
     else:
         run(config, trainset, testset)
+
+    # with open("{}/config_dump.json".format(args.config, args.config), mode='w') as config_file:
+    #     json.dump(config, config_file, skipkeys=True)
 
     logger.info("------ %.3fs ------", time.time() - start_time)
 
