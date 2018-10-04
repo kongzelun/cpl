@@ -12,6 +12,7 @@
   "layers": 10,
   "learning_rate": 0.001,
   "threshold": 10.0,
+  "gamma": 0.1,
   "tao": 10.0,
   "b": 1.0,
   "lambda_": 0.01,

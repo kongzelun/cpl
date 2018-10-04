@@ -210,11 +210,12 @@ class Prototypes(object):
 
 
 class DCELoss(nn.Module):
-    def __init__(self, threshold, lambda_=0.1):
+    def __init__(self, threshold, gamma=0.1, lambda_=0.1):
         super(DCELoss, self).__init__()
+        self.gamma = gamma
         self.lambda_ = lambda_
         self.prototypes = Prototypes(threshold)
-        self.softmax = nn.Softmax(dim=0)
+        # self.softmax = nn.Softmax(dim=0)
 
     def forward(self, feature, label):
         raise NotImplementedError
@@ -229,10 +230,10 @@ class DCELoss(nn.Module):
 
     def probability(self, feature, label):
         distances = compute_multi_distance(feature, torch.cat(self.prototypes.get()))
-        one = (distances.neg().add(self.prototypes.threshold)).exp().sum()
+        one = (-self.gamma * distances.pow(2)).exp().sum()
 
         distances = compute_multi_distance(feature, torch.cat(self.prototypes.get(label)))
-        prob = (distances.neg().add(self.prototypes.threshold)).exp().sum()
+        prob = (-self.gamma * distances.pow(2)).exp().sum()
 
         if one.item() > 0.0:
             prob /= one
@@ -261,10 +262,13 @@ class DCELoss(nn.Module):
     def set_threshold(self, value):
         self.prototypes.threshold = value
 
+    def set_gamma(self, value):
+        self.gamma = value
+
 
 class PairwiseDCELoss(DCELoss):
-    def __init__(self, threshold, tao=10.0, b=1.0, beta=1.0, lambda_=0.1):
-        super(PairwiseDCELoss, self).__init__(threshold, lambda_)
+    def __init__(self, threshold, gamma=0.1, tao=10.0, b=1.0, beta=1.0, lambda_=0.1):
+        super(PairwiseDCELoss, self).__init__(threshold, gamma, lambda_)
 
         self.b = b
         self.tao = tao
@@ -296,8 +300,8 @@ class PairwiseDCELoss(DCELoss):
 
 
 class GCPLLoss(DCELoss):
-    def __init__(self, threshold, lambda_=0.01):
-        super(GCPLLoss, self).__init__(threshold, lambda_)
+    def __init__(self, threshold, gamma=0.1, lambda_=0.01):
+        super(GCPLLoss, self).__init__(threshold, gamma, lambda_)
 
     def forward(self, feature, label):
         dce_loss, closest_prototype, min_distance = self.dec_loss(feature, label)

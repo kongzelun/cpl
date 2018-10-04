@@ -27,6 +27,7 @@ class Config(object):
     learning_rate = None
 
     threshold = None
+    gamma = None
     tao = None
     b = None
     lambda_ = None
@@ -83,7 +84,7 @@ def run(config, trainset, testset):
     logger.info("DenseNet Channels: %d", net.channels)
 
     if config.loss_type == 'gcpl':
-        criterion = models.GCPLLoss(threshold=config.threshold, lambda_=config.lambda_)
+        criterion = models.GCPLLoss(threshold=config.threshold, gamma=config.gamma, lambda_=config.lambda_)
     elif config.loss_type == 'pdce':
         criterion = models.PairwiseDCELoss(threshold=config.threshold, tao=config.tao, b=config.b, beta=0.5, lambda_=config.lambda_)
     else:
@@ -114,6 +115,8 @@ def run(config, trainset, testset):
         # train
         if config.train:
             logger.info("Epoch number: %d", epoch + 1)
+            logger.info("threshold: %7.4f gamma: %7.4f tao: %7.4f b: %7.4f",
+                        config.threshold, config.gamma, config.tao, config.b)
 
             running_loss = 0.0
             distance_sum = 0.0
@@ -140,10 +143,12 @@ def run(config, trainset, testset):
             std_distance = distances['distance'].std()
 
             config.threshold = (average_distance + std_distance).item()
+            config.gamma = 1/config.threshold
             config.tao = average_distance.item()
             config.b = std_distance.item()
 
             criterion.set_threshold(config.threshold)
+            criterion.set_gamma(config.gamma)
             criterion.set_tao(config.tao)
             criterion.set_b(config.b)
 
@@ -152,7 +157,6 @@ def run(config, trainset, testset):
             torch.save(intra_class_distances, config.intra_class_distances_path)
 
             logger.info("Prototypes Count: %d", len(criterion.prototypes))
-            logger.info("Prototypes Threshold: %7.4f", criterion.prototypes.threshold)
 
         # test
         if not intra_class_distances:
@@ -309,6 +313,11 @@ def main():
 
     trainset = models.DataSet(dataset[:config.train_test_split], config.tensor_view)
     testset = models.DataSet(dataset[config.train_test_split:], config.tensor_view)
+
+    # import torchvision
+    # transform = torchvision.transforms.Compose([torchvision.transforms.ToTensor()])
+    # trainset = torchvision.datasets.FashionMNIST(root="data/fashion-mnist", train=True, transform=transform, download=False)
+    # testset = torchvision.datasets.FashionMNIST(root="data/fashion-mnist", train=False, transform=transform, download=False)
 
     logger.info("********************************************************************************")
     logger.info("%s", config)
