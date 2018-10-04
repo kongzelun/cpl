@@ -267,19 +267,19 @@ class DCELoss(nn.Module):
 
 
 class PairwiseDCELoss(DCELoss):
-    def __init__(self, threshold, gamma=0.1, tao=10.0, b=1.0, beta=1.0, lambda_=0.1):
+    def __init__(self, threshold, gamma=0.1, tao=10.0, b=1.0, lambda_=0.1):
         super(PairwiseDCELoss, self).__init__(threshold, gamma, lambda_)
 
         self.b = b
         self.tao = tao
-        self.beta = beta
+        self.beta = self.gamma
 
     def forward(self, feature, label):
         dce_loss, closest_prototype, min_distance = self.dec_loss(feature, label)
 
         # pairwise loss
         distance = compute_distance(feature, closest_prototype.feature)
-        pw_loss = self._g(self.b - (self.tao - distance))
+        pw_loss = self._g(self.b - (self.tao - distance.pow(2)))
 
         for l in self.prototypes._dict:
             if l != label:

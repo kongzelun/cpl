@@ -86,7 +86,7 @@ def run(config, trainset, testset):
     if config.loss_type == 'gcpl':
         criterion = models.GCPLLoss(threshold=config.threshold, gamma=config.gamma, lambda_=config.lambda_)
     elif config.loss_type == 'pdce':
-        criterion = models.PairwiseDCELoss(threshold=config.threshold, tao=config.tao, b=config.b, beta=0.5, lambda_=config.lambda_)
+        criterion = models.PairwiseDCELoss(threshold=config.threshold, tao=config.tao, b=config.b, lambda_=config.lambda_)
     else:
         raise RuntimeError('Cannot find "{}" loss type.'.format(config.loss_type))
 
@@ -115,7 +115,7 @@ def run(config, trainset, testset):
         # train
         if config.train:
             logger.info("Epoch number: %d", epoch + 1)
-            logger.info("threshold: %7.4f gamma: %7.4f tao: %7.4f b: %7.4f",
+            logger.info("threshold: %7.4f, gamma: %7.4f, tao: %7.4f, b: %7.4f",
                         config.threshold, config.gamma, config.tao, config.b)
 
             running_loss = 0.0
@@ -143,7 +143,7 @@ def run(config, trainset, testset):
             std_distance = distances['distance'].std()
 
             config.threshold = (average_distance + std_distance).item()
-            config.gamma = 1/config.threshold
+            config.gamma = 1 / config.threshold
             config.tao = average_distance.item()
             config.b = std_distance.item()
 
