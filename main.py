@@ -115,7 +115,7 @@ def run(config, trainset, testset):
         # train
         if config.train:
             logger.info("Epoch number: %d", epoch + 1)
-            logger.info("threshold: %7.4f, gamma: %7.4f, tao: %7.4f, b: %7.4f",
+            logger.info("threshold: %.4f, gamma: %.4f, tao: %.4f, b: %.4f",
                         config.threshold, config.gamma, config.tao, config.b)
 
             running_loss = 0.0
@@ -142,7 +142,7 @@ def run(config, trainset, testset):
             average_distance = np.average(distances['distance'])
             std_distance = distances['distance'].std()
 
-            config.threshold = (average_distance + std_distance).item()
+            config.threshold = (average_distance + 3 * std_distance).item()
             config.gamma = 1 / config.threshold
             config.tao = average_distance.item()
             config.b = std_distance.item()
@@ -184,12 +184,13 @@ def run(config, trainset, testset):
 
             true_positive, false_positive, false_negative = detector.evaluate(detection_results)
 
-            precision = true_positive / (true_positive + false_positive)
-            recall = true_positive / (true_positive + false_negative)
+            precision = true_positive / (true_positive + false_positive + 1)
+            recall = true_positive / (true_positive + false_negative + 1)
 
             cm = confusion_matrix(detector.results['true_label'], detector.results['predicted_label'], sorted(list(testset.label_set)))
 
-            logger.info("Accuracy: %7.4f", accuracy_score(detector.results['true_label'], detector.results['predicted_label']))
+            results = detector.results[np.isin(detector.results['true_label'], list(testset.label_set))]
+            logger.info("Accuracy: %7.4f", accuracy_score(results['true_label'], results['predicted_label']))
             logger.info("True Positive: %d", true_positive)
             logger.info("False Positive: %d", false_positive)
             logger.info("False Negative: %d", false_negative)
@@ -259,7 +260,7 @@ def run_cel(config, trainset, testset):
 
                 logger.debug("%5d: %d, %d", j + 1, label, predicted_label)
 
-            cm = confusion_matrix(labels_true, labels_predicted, sorted(list(testset.label_set)))
+            cm = confusion_matrix(labels_true, labels_predicted, sorted(list(trainset.label_set)))
 
             logger.info("Accuracy: %7.4f", accuracy_score(labels_true, labels_predicted))
             logger.info("Confusion Matrix: \n%s", cm)
@@ -280,7 +281,8 @@ def main():
         raise RuntimeError("Config path not found!")
 
     with open("{}/{}.json".format(args.config, args.config)) as config_file:
-        config = Config(**json.load(config_file))
+        config_dict = json.load(config_file)
+        config = Config(**config_dict)
         config.running_path = args.config
         config.log_path = os.path.join(config.running_path, "{}.log".format(config.running_path))
         config.model_path = os.path.join(config.running_path, "{}.pkl".format(config.running_path))
@@ -329,8 +331,12 @@ def main():
     else:
         run(config, trainset, testset)
 
-    # with open("{}/config_dump.json".format(args.config, args.config), mode='w') as config_file:
-    #     json.dump(config, config_file, skipkeys=True)
+    with open("{}/{}.json".format(args.config, args.config), mode='w') as config_file:
+        config_dict['threshold'] = config.threshold
+        config_dict['gamma'] = config.gamma
+        config_dict['tao'] = config.tao
+        config_dict['b'] = config.b
+        json.dump(config_dict, config_file)
 
     logger.info("------ %.3fs ------", time.time() - start_time)
 

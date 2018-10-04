@@ -1,7 +1,7 @@
 {
   "train": true,
   "test": true,
-  "dataset_path": "data/fashion-mnist_stream.csv",
+  "dataset_path": "data/fashion-mnist_train.csv",
   "loss_type": "pdce",
   "tensor_view": [
     -1,
@@ -19,6 +19,6 @@
   "constant": false,
   "std_coefficient": 1.0,
   "train_test_split": 6000,
-  "epoch_number": 5,
+  "epoch_number": 10,
   "test_frequency": 5
 }
