@@ -16,7 +16,6 @@
   "tao": 20.0,
   "b": 1.0,
   "lambda_": 0.01,
-  "constant": false,
   "std_coefficient": 1.0,
   "train_test_split": 6000,
   "epoch_number": 100,
