@@ -14,7 +14,7 @@
   "threshold": 20.0,
   "gamma": 0.05,
   "tao": 20.0,
-  "b": 1.0,
+  "b": 2.0,
   "lambda_": 0.01,
   "std_coefficient": 1.0,
   "train_test_split": 6000,

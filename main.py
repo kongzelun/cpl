@@ -139,13 +139,13 @@ def run(config, trainset, testset):
                 logger.debug("[%d, %d] %7.4f, %7.4f", epoch + 1, i + 1, loss.item(), distance)
 
             distances = np.array(intra_class_distances, dtype=[('label', np.int32), ('distance', np.float32)])
-            average_distance = np.average(distances['distance'])
-            std_distance = distances['distance'].std()
+            average_distance = np.average(distances['distance']).item()
+            std_distance = distances['distance'].std().item()
 
-            config.threshold = (average_distance + 3 * std_distance).item()
-            config.gamma = 1 / config.threshold
+            config.threshold = (average_distance + 4 * std_distance)
+            config.gamma = 1 / average_distance
             config.tao = config.threshold
-            config.b = std_distance.item()
+            config.b = std_distance
 
             criterion.set_threshold(config.threshold)
             criterion.set_gamma(config.gamma)
