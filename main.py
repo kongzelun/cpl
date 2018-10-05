@@ -144,7 +144,7 @@ def run(config, trainset, testset):
 
             config.threshold = (average_distance + 3 * std_distance).item()
             config.gamma = 1 / config.threshold
-            config.tao = average_distance.item()
+            config.tao = config.threshold
             config.b = std_distance.item()
 
             criterion.set_threshold(config.threshold)

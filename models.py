@@ -284,8 +284,8 @@ class PairwiseDCELoss(DCELoss):
         for l in self.prototypes._dict:
             if l != label:
                 prototypes = torch.cat(self.prototypes.get(l))
-                distance = compute_multi_distance(feature, prototypes).min()
-                pw_loss += self._g(self.b + (self.tao - distance))
+                distances = compute_multi_distance(feature, prototypes).min()
+                pw_loss += self._g(self.b + (self.tao - distances.pow(2)))
 
         return dce_loss + self.lambda_ * pw_loss, min_distance
 
