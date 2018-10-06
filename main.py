@@ -168,7 +168,6 @@ def run(config, trainset, testset):
                 except RuntimeError:
                     logger.error("Loading prototypes from file '%s' failed.", config.intra_class_distances_path)
 
-
         detector = models.Detector(intra_class_distances, config.std_coefficient, trainset.label_set)
         logger.info("Distance Average: %s", detector.average_distances)
         logger.info("Distance Std: %s", detector.std_distances)

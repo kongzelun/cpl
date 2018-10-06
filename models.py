@@ -27,6 +27,24 @@ class DataSet(Dataset):
         return len(self.data)
 
 
+class SVNHDataset(Dataset):
+    def __init__(self, dataset, tensor_view):
+        self.data = []
+        self.label_set = set()
+
+        for s in dataset:
+            x = tensor(s[:-1], dtype=torch.float).view(tensor_view)
+            y = tensor(s[-1], dtype=torch.long)
+            self.data.append((x, y))
+            self.label_set.add(int(s[-1]))
+
+    def __getitem__(self, index):
+        return self.data[index]
+
+    def __len__(self):
+        return len(self.data)
+
+
 class CNNNet(nn.Module):
     def __init__(self, device, in_channels):
         super(CNNNet, self).__init__()
