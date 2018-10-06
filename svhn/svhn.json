@@ -1,7 +1,7 @@
 {
   "train": true,
   "test": true,
-  "dataset_path": "data/cifar10_stream.csv",
+  "dataset_path": "data/svhn_stream.csv",
   "loss_type": "pdce",
   "tensor_view": [
     -1,
@@ -9,7 +9,7 @@
     32
   ],
   "in_channels": 3,
-  "layers": 10,
+  "layers": 9,
   "learning_rate": 0.001,
   "threshold": 20.0,
   "gamma": 0.05,
@@ -18,6 +18,6 @@
   "lambda_": 0.01,
   "std_coefficient": 0.25,
   "train_test_split": 6000,
-  "epoch_number": 10,
-  "test_frequency": 1
+  "epoch_number": 50,
+  "test_frequency": 5
 }

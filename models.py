@@ -15,25 +15,7 @@ class DataSet(Dataset):
         self.label_set = set()
 
         for s in dataset:
-            x = (tensor(s[:-1], dtype=torch.float) / 255).view(tensor_view)
-            y = tensor(s[-1], dtype=torch.long)
-            self.data.append((x, y))
-            self.label_set.add(int(s[-1]))
-
-    def __getitem__(self, index):
-        return self.data[index]
-
-    def __len__(self):
-        return len(self.data)
-
-
-class SVNHDataset(Dataset):
-    def __init__(self, dataset, tensor_view):
-        self.data = []
-        self.label_set = set()
-
-        for s in dataset:
-            x = tensor(s[:-1], dtype=torch.float).view(tensor_view)
+            x = (tensor(s[:-1], dtype=torch.float)).view(tensor_view)
             y = tensor(s[-1], dtype=torch.long)
             self.data.append((x, y))
             self.label_set.add(int(s[-1]))
@@ -364,7 +346,7 @@ class Detector(object):
 
     def __call__(self, predicted_label, probability, distance):
         novelty = False
-        if distance > self.thresholds[predicted_label] and probability < 0.9:
+        if distance > self.thresholds[predicted_label] and probability < 0.75:
             novelty = True
 
         return novelty

@@ -22,6 +22,7 @@
       <w>pwdce</w>
       <w>relu</w>
       <w>softmax</w>
+      <w>svhn</w>
       <w>testloader</w>
       <w>testset</w>
       <w>torchvision</w>

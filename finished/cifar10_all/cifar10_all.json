@@ -1,0 +1,23 @@
+{
+  "train": true,
+  "test": true,
+  "dataset_path": "data/cifar10_train.csv",
+  "loss_type": "pdce",
+  "tensor_view": [
+    -1,
+    32,
+    32
+  ],
+  "in_channels": 3,
+  "layers": 10,
+  "learning_rate": 0.0001,
+  "threshold": 4.216249108314514,
+  "gamma": 0.4304402877686029,
+  "tao": 4.216249108314514,
+  "b": 0.47326162457466125,
+  "lambda_": 0.01,
+  "std_coefficient": 1.0,
+  "train_test_split": 6000,
+  "epoch_number": 2,
+  "test_frequency": 1
+}

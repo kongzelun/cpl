@@ -7,15 +7,15 @@
     32
   ],
   "in_channels": 4,
-  "layers": 10,
+  "layers": 12,
   "learning_rate": 0.001,
-  "threshold": 12.5,
-  "gamma": 0.3,
-  "tao": 12.5,
-  "b": 3.0,
+  "threshold": 20.0,
+  "gamma": 0.05,
+  "tao": 20.0,
+  "b": 2.0,
   "lambda_": 0.01,
-  "std_coefficient": 0.25,
+  "std_coefficient": 0.5,
   "train_test_split": 6000,
   "epoch_number": 50,
-  "test_frequency": 10
+  "test_frequency": 5
 }
