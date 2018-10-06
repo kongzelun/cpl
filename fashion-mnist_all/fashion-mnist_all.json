@@ -10,14 +10,14 @@
   ],
   "in_channels": 1,
   "layers": 8,
-  "learning_rate": 0.001,
-  "threshold": 5.804828405380249,
-  "gamma": 0.3292137244387289,
-  "tao": 5.804828405380249,
-  "b": 0.6918219923973083,
+  "learning_rate": 0.0002,
+  "threshold": 8.856819152832031,
+  "gamma": 0.19670010482408387,
+  "tao": 8.856819152832031,
+  "b": 0.9432344436645508,
   "lambda_": 0.01,
   "std_coefficient": 1.0,
   "train_test_split": 6000,
-  "epoch_number": 10,
-  "test_frequency": 2
+  "epoch_number": 2,
+  "test_frequency": 1
 }
