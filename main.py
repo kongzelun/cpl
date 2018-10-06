@@ -105,9 +105,9 @@ def run(config, trainset, testset):
     if os.path.exists(config.prototypes_path):
         try:
             criterion.load_prototypes(config.prototypes_path)
-            logger.info("Load prototypes from file '%s'.", config.model_path)
+            logger.info("Load prototypes from file '%s'.", config.prototypes_path)
         except RuntimeError:
-            logger.error("Loading prototypes from file '%s' failed.", config.model_path)
+            logger.error("Loading prototypes from file '%s' failed.", config.prototypes_path)
 
     for epoch in range(config.epoch_number):
 
@@ -160,7 +160,14 @@ def run(config, trainset, testset):
 
         # test
         if not intra_class_distances:
-            intra_class_distances = torch.load(config.intra_class_distances_path)
+            # load saved intra class distances
+            if os.path.exists(config.prototypes_path):
+                try:
+                    intra_class_distances = torch.load(config.intra_class_distances_path)
+                    logger.info("Load intra class distances from file '%s'.", config.intra_class_distances_path)
+                except RuntimeError:
+                    logger.error("Loading prototypes from file '%s' failed.", config.intra_class_distances_path)
+
 
         detector = models.Detector(intra_class_distances, config.std_coefficient, trainset.label_set)
         logger.info("Distance Average: %s", detector.average_distances)
@@ -190,7 +197,7 @@ def run(config, trainset, testset):
             cm = confusion_matrix(detector.results['true_label'], detector.results['predicted_label'], sorted(list(trainset.label_set)))
 
             results = detector.results[np.isin(detector.results['true_label'], list(testset.label_set))]
-            logger.info("Accuracy: %7.4f", accuracy_score(results['true_label'], results['predicted_label']) / ((true_positive + false_negative) / len(testset)))
+            logger.info("Accuracy: %7.4f", accuracy_score(results['true_label'], results['predicted_label']))
             logger.info("True Positive: %d", true_positive)
             logger.info("False Positive: %d", false_positive)
             logger.info("False Negative: %d", false_negative)

@@ -1,1 +1,23 @@
-{"train": true, "test": true, "dataset_path": "data/fashion-mnist_train.csv", "loss_type": "pdce", "tensor_view": [-1, 28, 28], "in_channels": 1, "layers": 10, "learning_rate": 0.001, "threshold": 5.4322521686553955, "gamma": 0.32949642627556897, "tao": 5.4322521686553955, "b": 0.5993294715881348, "lambda_": 0.01, "std_coefficient": 1.0, "train_test_split": 6000, "epoch_number": 10, "test_frequency": 5}
+{
+  "train": true,
+  "test": true,
+  "dataset_path": "data/fashion-mnist_train.csv",
+  "loss_type": "pdce",
+  "tensor_view": [
+    -1,
+    28,
+    28
+  ],
+  "in_channels": 1,
+  "layers": 8,
+  "learning_rate": 0.001,
+  "threshold": 5.804828405380249,
+  "gamma": 0.3292137244387289,
+  "tao": 5.804828405380249,
+  "b": 0.6918219923973083,
+  "lambda_": 0.01,
+  "std_coefficient": 1.0,
+  "train_test_split": 6000,
+  "epoch_number": 10,
+  "test_frequency": 2
+}
