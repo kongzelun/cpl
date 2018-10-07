@@ -14,8 +14,8 @@ from sklearn.metrics import accuracy_score, confusion_matrix
 
 class Config(object):
     # read from json
-    train = True
-    test = True
+    # train = True
+    testonly = False
 
     dataset_path = None
     loss_type = None
@@ -31,11 +31,10 @@ class Config(object):
     tao = None
     b = None
     lambda_ = None
-
     std_coefficient = None
 
     epoch_number = 1
-    test_frequency = 1
+    testfreq = 1
     train_test_split = None
 
     # derived
@@ -60,7 +59,7 @@ def setup_logger(level=logging.DEBUG, filename=None):
     logger.setLevel(level)
     handler = logging.StreamHandler()
     handler.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(asctime)s: %(message)s')
+    formatter = logging.Formatter('[%(asctime)s] %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
@@ -112,8 +111,9 @@ def run(config, trainset, testset):
     for epoch in range(config.epoch_number):
 
         intra_class_distances = []
+
         # train
-        if config.train:
+        if not config.testonly:
             logger.info("Epoch number: %d", epoch + 1)
             logger.info("threshold: %.4f, gamma: %.4f, tao: %.4f, b: %.4f",
                         config.threshold, config.gamma, config.tao, config.b)
@@ -121,7 +121,10 @@ def run(config, trainset, testset):
             running_loss = 0.0
             distance_sum = 0.0
 
-            criterion.clear_prototypes()
+            if len(criterion.prototypes) > len(trainset.label_set):
+                criterion.clear_prototypes()
+            else:
+                criterion.upgrade_prototypes()
 
             for i, (feature, label) in enumerate(trainloader):
                 feature, label = feature.to(net.device), label.item()
@@ -144,7 +147,7 @@ def run(config, trainset, testset):
 
             config.threshold = (average_distance + 4 * std_distance)
             config.gamma = 1 / average_distance
-            config.tao = config.threshold
+            config.tao = average_distance + std_distance
             config.b = std_distance
 
             criterion.set_threshold(config.threshold)
@@ -159,9 +162,9 @@ def run(config, trainset, testset):
             logger.info("Prototypes Count: %d", len(criterion.prototypes))
 
         # test
-        if not intra_class_distances:
+        if not config.testonly:
             # load saved intra class distances
-            if os.path.exists(config.prototypes_path):
+            if os.path.exists(config.intra_class_distances_path):
                 try:
                     intra_class_distances = torch.load(config.intra_class_distances_path)
                     logger.info("Load intra class distances from file '%s'.", config.intra_class_distances_path)
@@ -173,7 +176,7 @@ def run(config, trainset, testset):
         logger.info("Distance Std: %s", detector.std_distances)
         logger.info("Distance Threshold: %s", detector.thresholds)
 
-        if (epoch + 1) % config.test_frequency == 0 or not config.train:
+        if (epoch + 1) % config.testfreq == 0 or config.testonly:
 
             detection_results = []
 
@@ -193,7 +196,7 @@ def run(config, trainset, testset):
             precision = true_positive / (true_positive + false_positive + 1)
             recall = true_positive / (true_positive + false_negative + 1)
 
-            cm = confusion_matrix(detector.results['true_label'], detector.results['predicted_label'], sorted(list(trainset.label_set)))
+            cm = confusion_matrix(detector.results['true_label'], detector.results['predicted_label'], sorted(list(testset.label_set)))
 
             results = detector.results[np.isin(detector.results['true_label'], list(testset.label_set))]
             logger.info("Accuracy: %7.4f", accuracy_score(results['true_label'], results['predicted_label']))
@@ -251,12 +254,12 @@ def run_cel(config, trainset, testset):
         torch.save(net.state_dict(), config.model_path)
 
         # test
-        if config.test and (epoch + 1) % config.test_frequency == 0:
+        if (epoch + 1) % config.testfreq == 0 or config.testonly:
 
             labels_true = []
             labels_predicted = []
 
-            for j, (feature, label) in enumerate(testloader):
+            for i, (feature, label) in enumerate(testloader):
                 feature, label = feature.to(net.device), label.item()
                 feature = net(feature).view(1, -1)
                 _, predicted_label = fc_net(feature).max(dim=1)
@@ -264,9 +267,9 @@ def run_cel(config, trainset, testset):
                 labels_true.append(label)
                 labels_predicted.append(predicted_label)
 
-                logger.debug("%5d: %d, %d", j + 1, label, predicted_label)
+                logger.debug("%5d: %d, %d", i + 1, label, predicted_label)
 
-            cm = confusion_matrix(labels_true, labels_predicted, sorted(list(trainset.label_set)))
+            cm = confusion_matrix(labels_true, labels_predicted, sorted(list(testset.label_set)))
 
             logger.info("Accuracy: %7.4f", accuracy_score(labels_true, labels_predicted))
             logger.info("Confusion Matrix: \n%s", cm)
@@ -277,41 +280,44 @@ def main():
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('-c', '--config', type=str, help="Config directory path.", required=True)
-    parser.add_argument('--clear', help="Clear running path.", action="store_true")
-    parser.add_argument('-e', '--epoch', type=int, help="Train epoch number.", default=None)
+    parser.add_argument('-d', '--dir', type=str, help="Running directory path.", required=True)
+    parser.add_argument('-e', '--epoch', type=int, help="Train epoch number.", default=1)
+    parser.add_argument('-f', '--testfreq', type=int, help="Test frequency.", default=1)
+    parser.add_argument('-t', '--testonly', help="Test only.", action="store_true")
+    parser.add_argument('-c', '--clear', help="Clear running path.", action="store_true")
 
     args = parser.parse_args()
 
-    if not os.path.exists(args.config):
+    if not os.path.isdir(args.dir):
         raise RuntimeError("Config path not found!")
 
-    with open("{}/{}.json".format(args.config, args.config)) as config_file:
-        config_dict = json.load(config_file)
-        config = Config(**config_dict)
-        config.running_path = args.config
-        config.log_path = os.path.join(config.running_path, "{}.log".format(config.running_path))
-        config.model_path = os.path.join(config.running_path, "{}.pkl".format(config.running_path))
-        config.prototypes_path = os.path.join(config.running_path, "{}_prototypes.pkl".format(config.running_path))
-        config.intra_class_distances_path = os.path.join(config.running_path, "{}_intra_class_distances.pkl".format(config.running_path))
+    config_file = "{}/config.json".format(args.dir)
 
-    if args.epoch:
-        config.epoch_number = args.epoch
+    with open(config_file) as file:
+        config_dict = json.load(file)
 
-    if not config.train:
-        config.epoch_number = 1
-
+    config = Config(**config_dict)
+    config.running_path = args.dir
+    config.log_path = os.path.join(config.running_path, "run.log")
+    config.model_path = os.path.join(config.running_path, "model.pkl")
+    config.prototypes_path = os.path.join(config.running_path, "prototypes.pkl")
+    config.intra_class_distances_path = os.path.join(config.running_path, "distances.pkl")
+    config.epoch_number = args.epoch
     config.device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
+    if args.testonly:
+        config.epoch_number = 1
+
     if args.clear:
-        try:
-            os.remove(config.log_path)
-            os.remove(config.model_path)
-            os.remove(config.prototypes_path)
-            os.remove(config.intra_class_distances_path)
-            os.remove("{}/config_dump.json".format(args.config, args.config))
-        except FileNotFoundError:
-            pass
+        if input("Do you really want to clear the running directory? (y/[n])") == 'y':
+            try:
+                os.remove(config.log_path)
+                os.remove(config.model_path)
+                os.remove(config.prototypes_path)
+                os.remove(config.intra_class_distances_path)
+                # os.remove("{}/config_dump.json".format(args.dir))
+            except FileNotFoundError:
+                pass
 
     logger = setup_logger(level=logging.DEBUG, filename=config.log_path)
 
@@ -337,14 +343,15 @@ def main():
     else:
         run(config, trainset, testset)
 
-    with open("{}/{}.json".format(args.config, args.config), mode='w') as config_file:
+    with open(config_file, mode='w') as file:
+        config_dict['learning_rate'] = config.learning_rate / 2
         config_dict['threshold'] = config.threshold
         config_dict['gamma'] = config.gamma
         config_dict['tao'] = config.tao
         config_dict['b'] = config.b
-        json.dump(config_dict, config_file)
+        json.dump(config_dict, file)
 
-    logger.info("------ %.3fs ------", time.time() - start_time)
+    logger.info("---------- %.3fs ----------", time.time() - start_time)
 
 
 if __name__ == '__main__':

@@ -183,6 +183,10 @@ class Prototypes(object):
         self._list.clear()
         self._dict.clear()
 
+    def upgrade(self):
+        for p in self._list:
+            p.sample_count = 1
+
     def get(self, label=None):
         collection = self._list if label is None else self._dict[label]
         return list(map(lambda p: p.feature, collection))
@@ -270,6 +274,9 @@ class DCELoss(nn.Module):
 
     def clear_prototypes(self):
         self.prototypes.clear()
+
+    def upgrade_prototypes(self):
+        self.prototypes.upgrade()
 
     def set_threshold(self, value):
         self.prototypes.threshold = value
