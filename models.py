@@ -241,7 +241,6 @@ class DCELoss(nn.Module):
         probability = self.probability(feature, label)
         dce_loss = -probability.log()
 
-        # return dce_loss, closest_prototype, min_distance
         return dce_loss, min_distance, closest_prototype
 
     def probability(self, feature, label):
@@ -291,7 +290,6 @@ class PairwiseDCELoss(DCELoss):
 
         self.b = b
         self.tao = tao
-        self.beta = 1.0
 
     def forward(self, feature, label):
         loss, min_distance, closest_prototype = self.dec_loss(feature, label)
@@ -299,18 +297,22 @@ class PairwiseDCELoss(DCELoss):
         # pairwise loss
         # distance = compute_distance(feature, closest_prototype.feature)
         # pw_loss = self._g(self.b - (self.tao - distance.pow(2)))
-
+        #
         # for l in self.prototypes._dict:
         #     if l != label:
         #         prototypes = torch.cat(self.prototypes.get(l))
         #         distances = compute_multi_distance(feature, prototypes).min()
         #         pw_loss += self._g(self.b + (self.tao - distances.pow(2)))
 
-        for p in self.prototypes:
-            like = 1 if p.label == label else -1
-            distance = compute_distance(feature, p.feature)
-            pw_loss = self._g(self.b - like * (self.tao - distance.pow(2)))
-            loss += self.lambda_ * pw_loss.squeeze(0)
+        like = tensor([1.0 if p.label == label else -1.0 for p in self.prototypes]).to(feature.device)
+        distances = compute_multi_distance(feature, torch.cat(self.prototypes.get()))
+        loss += self.lambda_ * self._g(self.b - like * (self.tao - distances.pow(2))).sum()
+
+        # for p in self.prototypes:
+        #     like = 1 if p.label == label else -1
+        #     distance = compute_distance(feature, p.feature)
+        #     pw_loss = self._g(self.b - like * (self.tao - distance.pow(2)))
+        #     loss += self.lambda_ * pw_loss.squeeze(0)
 
         # for p in self.prototypes:
         #     like = 1 if p.label == label else -1

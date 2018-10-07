@@ -121,10 +121,12 @@ def run(config, trainset, testset):
             running_loss = 0.0
             distance_sum = 0.0
 
-            if len(criterion.prototypes) > len(trainset.label_set):
-                criterion.clear_prototypes()
-            else:
-                criterion.upgrade_prototypes()
+            # if len(criterion.prototypes) > len(trainset.label_set):
+            #     criterion.clear_prototypes()
+            # else:
+            #     criterion.upgrade_prototypes()
+
+            criterion.clear_prototypes()
 
             for i, (feature, label) in enumerate(trainloader):
                 feature, label = feature.to(net.device), label.item()
@@ -141,11 +143,14 @@ def run(config, trainset, testset):
 
                 logger.debug("[%d, %d] %7.4f, %7.4f", epoch + 1, i + 1, loss.item(), distance)
 
-            distances = np.array(intra_class_distances, dtype=[('label', np.int32), ('distance', np.float32)])
+            distances = np.array(intra_class_distances, dtype=[
+                ('label', np.int32),
+                ('distance', np.float32)
+            ])
             average_distance = np.average(distances['distance']).item()
             std_distance = distances['distance'].std().item()
 
-            config.threshold = (average_distance + 4 * std_distance)
+            config.threshold = (average_distance + 3 * std_distance)
             config.gamma = 1 / average_distance
             config.tao = average_distance + std_distance
             config.b = std_distance
@@ -262,7 +267,7 @@ def run_cel(config, trainset, testset):
             for i, (feature, label) in enumerate(testloader):
                 feature, label = feature.to(net.device), label.item()
                 feature = net(feature).view(1, -1)
-                _, predicted_label = fc_net(feature).max(dim=1)
+                probability, predicted_label = fc_net(feature).max(dim=1)
 
                 labels_true.append(label)
                 labels_predicted.append(predicted_label)
@@ -304,8 +309,9 @@ def main():
     config.intra_class_distances_path = os.path.join(config.running_path, "distances.pkl")
     config.epoch_number = args.epoch
     config.device = "cuda:0" if torch.cuda.is_available() else "cpu"
+    config.testonly = args.testonly
 
-    if args.testonly:
+    if config.testonly:
         config.epoch_number = 1
 
     if args.clear:

@@ -23,7 +23,9 @@
       <w>relu</w>
       <w>softmax</w>
       <w>svhn</w>
+      <w>testfreq</w>
       <w>testloader</w>
+      <w>testonly</w>
       <w>testset</w>
       <w>torchvision</w>
       <w>trainloader</w>
