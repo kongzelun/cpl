@@ -374,10 +374,10 @@ def main():
     random.shuffle(train_dataset)
     random.shuffle(test_dataset)
 
-    means = [train_dataset[:, i:-1:config.tensor_view[0]].mean() for i in range(config.tensor_view[0])]
+    mean = [train_dataset[:, i:-1:config.tensor_view[0]].mean() for i in range(config.tensor_view[0])]
     std = [train_dataset[:, i:-1:config.tensor_view[0]].std() for i in range(config.tensor_view[0])]
 
-    torchvision.transforms.Normalize(means=means, std=std)
+    torchvision.transforms.Normalize(mean=mean, std=std)
 
     trainset = DataSet(dataset[:config.train_test_split], config.tensor_view)
     testset = DataSet(dataset[config.train_test_split:], config.tensor_view)
