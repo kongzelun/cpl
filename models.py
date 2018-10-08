@@ -1,7 +1,5 @@
 import torch
 import torch.nn as nn
-from torch import tensor
-from torch.utils.data import Dataset
 import numpy as np
 import dense_net
 
@@ -25,25 +23,6 @@ compute_multi_distance = nn.PairwiseDistance(p=2, eps=1e-6, keepdim=True)
 #
 #     def __len__(self):
 #         return len(self.data)
-
-
-class DataSet(Dataset):
-    def __init__(self, path, tensor_view):
-        self.data = []
-        self.label_set = set()
-
-        for s in dataset:
-            x = (tensor(s[:-1], dtype=torch.float)).view(tensor_view)
-            y = tensor(s[-1], dtype=torch.long)
-            self.data.append((x, y))
-            self.label_set.add(int(s[-1]))
-
-    def __getitem__(self, index):
-        return self.data[index]
-
-    def __len__(self):
-        return len(self.data)
-
 
 class DenseNet(nn.Module):
     def __init__(self, device, in_channels, number_layers=6, growth_rate=12, reduction=2, bottleneck=True, drop_rate=0.0):

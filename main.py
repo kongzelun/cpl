@@ -3,12 +3,16 @@ import argparse
 import json
 import logging
 import time
+import random
 import numpy as np
 import pandas as pd
 import torch
+from torch import tensor
 import torch.nn as nn
 import torch.optim as optim
+from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
+import torchvision
 import models
 from sklearn.metrics import accuracy_score, confusion_matrix
 
@@ -54,6 +58,26 @@ class Config(object):
 
     def __repr__(self):
         return "{}".format(self.values)
+
+
+class DataSet(Dataset):
+    def __init__(self, dataset, tensor_view, transform):
+        self.data = []
+        self.label_set = set()
+        self.transform = transform
+
+        for s in dataset:
+            x = (tensor(s[:-1], dtype=torch.float)).view(tensor_view)
+            y = tensor(s[-1], dtype=torch.long)
+            x = self.transform(x)
+            self.data.append((x, y))
+            self.label_set.add(int(s[-1]))
+
+    def __getitem__(self, index):
+        return self.data[index]
+
+    def __len__(self):
+        return len(self.data)
 
 
 def setup_logger(level=logging.DEBUG, filename=None):
@@ -104,8 +128,8 @@ def run(config, trainset, testset):
         except RuntimeError:
             logger.error("Loading model from file '%s' failed.", config.model_path)
 
-    # sgd = optim.SGD(net.parameters(), lr=config.learning_rate, momentum=0.9)
-    adam = optim.Adam(net.parameters(), lr=config.learning_rate)
+    sgd = optim.SGD(net.parameters(), lr=config.learning_rate, momentum=0.9)
+    # adam = optim.Adam(net.parameters(), lr=config.learning_rate)
 
     # load saved model state dict
     if os.path.exists(config.model_path):
@@ -146,11 +170,11 @@ def run(config, trainset, testset):
 
             for i, (feature, label) in enumerate(trainloader):
                 feature, label = feature.to(net.device), label.item()
-                adam.zero_grad()
+                sgd.zero_grad()
                 feature = net(feature).view(1, -1)
                 loss, distance = criterion(feature, label)
                 loss.backward()
-                adam.step()
+                sgd.step()
 
                 running_loss += loss.item()
 
@@ -331,7 +355,7 @@ def main():
         config.epoch_number = 1
 
     if args.clear:
-        if input("Do you really want to clear the running directory? (y/[n])") == 'y':
+        if input("Do you really want to clear the running directory? (y/[n]) ") == 'y':
             try:
                 os.remove(config.log_path)
                 os.remove(config.model_path)
@@ -344,12 +368,19 @@ def main():
     logger = setup_logger(level=logging.DEBUG, filename=config.log_path)
 
     # dataset = np.loadtxt(config.dataset_path, delimiter=',')
-    dataset = pd.read_csv()
-    np.random.shuffle(dataset[:config.train_test_split])
-    np.random.shuffle(dataset[config.train_test_split:])
+    dataset = pd.read_csv(config.dataset_path, sep=',', header=None).values
+    train_dataset = dataset[:config.train_test_split]
+    test_dataset = dataset[config.train_test_split:]
+    random.shuffle(train_dataset)
+    random.shuffle(test_dataset)
 
-    trainset = models.DataSet(dataset[:config.train_test_split], config.tensor_view)
-    testset = models.DataSet(dataset[config.train_test_split:], config.tensor_view)
+    means = [train_dataset[:, i:-1:config.tensor_view[0]].mean() for i in range(config.tensor_view[0])]
+    std = [train_dataset[:, i:-1:config.tensor_view[0]].std() for i in range(config.tensor_view[0])]
+
+    torchvision.transforms.Normalize(means=means, std=std)
+
+    trainset = DataSet(dataset[:config.train_test_split], config.tensor_view)
+    testset = DataSet(dataset[config.train_test_split:], config.tensor_view)
 
     # import torchvision
     # transform = torchvision.transforms.Compose([torchvision.transforms.ToTensor()])

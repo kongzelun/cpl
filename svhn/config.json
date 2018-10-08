@@ -1,1 +1,20 @@
-{"dataset_path": "data/svhn_stream.csv", "loss_type": "pdce", "tensor_view": [-1, 32, 32], "in_channels": 3, "number_layers": 10, "growth_rate": 12, "learning_rate": 0.0005, "threshold": 5.050654709339142, "gamma": 0.3205938000246581, "tao": 3.763026177883148, "b": 0.6438142657279968, "lambda_": 0.01, "std_coefficient": 0.1, "train_test_split": 6000}
+{
+  "dataset_path": "data/svhn_stream.csv",
+  "loss_type": "pdce",
+  "tensor_view": [
+    -1,
+    32,
+    32
+  ],
+  "in_channels": 3,
+  "number_layers": 10,
+  "growth_rate": 12,
+  "learning_rate": 0.0005,
+  "threshold": 5.050654709339142,
+  "gamma": 0.3205938000246581,
+  "tao": 3.763026177883148,
+  "b": 0.6438142657279968,
+  "lambda_": 0.01,
+  "std_coefficient": 0.1,
+  "train_test_split": 6000
+}
