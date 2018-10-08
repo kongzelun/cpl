@@ -41,6 +41,7 @@ class Config(object):
     # derived
     running_path = None
     log_path = None
+    optim_path = None
     model_path = None
     prototypes_path = None
     intra_class_distances_path = None
@@ -94,7 +95,17 @@ def run(config, trainset, testset):
     else:
         raise RuntimeError('Cannot find "{}" loss type.'.format(config.loss_type))
 
-    sgd = optim.SGD(net.parameters(), lr=config.learning_rate, momentum=0.9)
+    # load saved optim
+    if os.path.exists(config.model_path):
+        state_dict = torch.load(config.optim_path)
+        try:
+            net.load_state_dict(state_dict)
+            logger.info("Load model from file '%s'.", config.model_path)
+        except RuntimeError:
+            logger.error("Loading model from file '%s' failed.", config.model_path)
+
+    # sgd = optim.SGD(net.parameters(), lr=config.learning_rate, momentum=0.9)
+    adam = optim.Adam(net.parameters(), lr=config.learning_rate)
 
     # load saved model state dict
     if os.path.exists(config.model_path):
@@ -135,11 +146,11 @@ def run(config, trainset, testset):
 
             for i, (feature, label) in enumerate(trainloader):
                 feature, label = feature.to(net.device), label.item()
-                sgd.zero_grad()
+                adam.zero_grad()
                 feature = net(feature).view(1, -1)
                 loss, distance = criterion(feature, label)
                 loss.backward()
-                sgd.step()
+                adam.step()
 
                 running_loss += loss.item()
 
@@ -332,7 +343,8 @@ def main():
 
     logger = setup_logger(level=logging.DEBUG, filename=config.log_path)
 
-    dataset = np.loadtxt(config.dataset_path, delimiter=',')
+    # dataset = np.loadtxt(config.dataset_path, delimiter=',')
+    dataset = pd.read_csv()
     np.random.shuffle(dataset[:config.train_test_split])
     np.random.shuffle(dataset[config.train_test_split:])
 

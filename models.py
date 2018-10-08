@@ -9,8 +9,26 @@ compute_distance = nn.PairwiseDistance(p=2, eps=1e-6)
 compute_multi_distance = nn.PairwiseDistance(p=2, eps=1e-6, keepdim=True)
 
 
+# class DataSet(Dataset):
+#     def __init__(self, dataset, tensor_view):
+#         self.data = []
+#         self.label_set = set()
+#
+#         for s in dataset:
+#             x = (tensor(s[:-1], dtype=torch.float)).view(tensor_view)
+#             y = tensor(s[-1], dtype=torch.long)
+#             self.data.append((x, y))
+#             self.label_set.add(int(s[-1]))
+#
+#     def __getitem__(self, index):
+#         return self.data[index]
+#
+#     def __len__(self):
+#         return len(self.data)
+
+
 class DataSet(Dataset):
-    def __init__(self, dataset, tensor_view):
+    def __init__(self, path, tensor_view):
         self.data = []
         self.label_set = set()
 
@@ -27,30 +45,6 @@ class DataSet(Dataset):
         return len(self.data)
 
 
-class CNNNet(nn.Module):
-    def __init__(self, device, in_channels):
-        super(CNNNet, self).__init__()
-
-        self.conv1 = nn.Sequential(
-            nn.Conv2d(in_channels=in_channels, out_channels=10, kernel_size=5, padding=2),
-            nn.ReLU(),
-            nn.MaxPool2d(2, 2)
-        )
-        self.conv2 = nn.Sequential(
-            nn.Conv2d(in_channels=10, out_channels=10, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(2, 2)
-        )
-
-        self.device = device
-        self.to(device)
-
-    def forward(self, x):
-        x = self.conv1(x)
-        x = self.conv2(x)
-        return x
-
-
 class DenseNet(nn.Module):
     def __init__(self, device, in_channels, number_layers=6, growth_rate=12, reduction=2, bottleneck=True, drop_rate=0.0):
         super(DenseNet, self).__init__()
@@ -63,7 +57,7 @@ class DenseNet(nn.Module):
             block = dense_net.BasicBlock
 
         # 1st conv before any dense block
-        self.conv1 = nn.Conv2d(in_channels=in_channels, out_channels=channels, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv1 = nn.Conv2d(in_channels=in_channels, out_channels=channels, kernel_size=3, stride=1, padding=1, bias=True)
 
         # 1st block
         self.block1 = dense_net.DenseBlock(number_layers, channels, block, growth_rate, drop_rate)
@@ -96,7 +90,8 @@ class DenseNet(nn.Module):
         out = self.trans1(self.block1(out))
         out = self.trans2(self.block2(out))
         out = self.block3(out)
-        out = self.relu(self.bn1(out))
+        # out = self.relu(self.bn1(out))
+        out = self.relu(out)
         out = self.pooling(out)
         return out
 
@@ -292,11 +287,11 @@ class PairwiseDCELoss(DCELoss):
         self.tao = tao
 
     def forward(self, feature, label):
-        loss, min_distance, closest_prototype = self.dec_loss(feature, label)
+        dec_loss, min_distance, prototype = self.dec_loss(feature, label)
 
         # pairwise loss
-        # distance = compute_distance(feature, closest_prototype.feature)
-        # pw_loss = self._g(self.b - (self.tao - distance.pow(2)))
+        distance = compute_distance(feature, prototype.feature)
+        pw_loss = self._g(self.b - (self.tao - distance.pow(2)))
         #
         # for l in self.prototypes._dict:
         #     if l != label:
@@ -304,9 +299,12 @@ class PairwiseDCELoss(DCELoss):
         #         distances = compute_multi_distance(feature, prototypes).min()
         #         pw_loss += self._g(self.b + (self.tao - distances.pow(2)))
 
-        like = tensor([1.0 if p.label == label else -1.0 for p in self.prototypes]).to(feature.device)
-        distances = compute_multi_distance(feature, torch.cat(self.prototypes.get()))
-        loss += self.lambda_ * self._g(self.b - like * (self.tao - distances.pow(2))).sum()
+        prototypes = self.prototypes.get()
+        distances = compute_multi_distance(feature, torch.cat(prototypes))
+        distance, closest_prototype_index = distances.min(dim=0)
+        closest_prototype = self.prototypes[closest_prototype_index]
+        like = 1 if closest_prototype.label == label else -1
+        pw_loss += self._g(self.b - like * (self.tao - distance.pow(2)))
 
         # for p in self.prototypes:
         #     like = 1 if p.label == label else -1
@@ -320,7 +318,7 @@ class PairwiseDCELoss(DCELoss):
         #     pw_loss = self._g(self.b - like * (self.tao - distance))
         #     loss += self.lambda_ * pw_loss.squeeze(0)
 
-        return loss, min_distance
+        return dec_loss + self.lambda_ * pw_loss, min_distance
 
     def _g(self, z):
         return (1 + (self.gamma * z).exp()).log() / self.gamma
