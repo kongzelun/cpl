@@ -4,6 +4,7 @@ import json
 import logging
 import time
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -14,7 +15,6 @@ from sklearn.metrics import accuracy_score, confusion_matrix
 
 class Config(object):
     # read from json
-    # train = True
     testonly = False
 
     dataset_path = None
@@ -22,7 +22,8 @@ class Config(object):
 
     tensor_view = None
     in_channels = None
-    layers = None
+    number_layers = 6
+    growth_rate = 12
 
     learning_rate = None
 
@@ -75,11 +76,15 @@ def setup_logger(level=logging.DEBUG, filename=None):
 def run(config, trainset, testset):
     logger = logging.getLogger(__name__)
 
-    trainloader = DataLoader(dataset=trainset, batch_size=1, shuffle=True, num_workers=0)
-    testloader = DataLoader(dataset=testset, batch_size=1, shuffle=False, num_workers=0)
+    trainloader = DataLoader(dataset=trainset, batch_size=1, shuffle=True, num_workers=4)
+    testloader = DataLoader(dataset=testset, batch_size=1, shuffle=False, num_workers=4)
 
     # net = models.CNNNet(device=device)
-    net = models.DenseNet(device=torch.device(config.device), in_channels=config.in_channels, number_layers=config.layers, growth_rate=12, drop_rate=0.0)
+    net = models.DenseNet(device=torch.device(config.device),
+                          in_channels=config.in_channels,
+                          number_layers=config.number_layers,
+                          growth_rate=config.growth_rate,
+                          drop_rate=0.0)
     logger.info("DenseNet Channels: %d", net.channels)
 
     if config.loss_type == 'gcpl':
@@ -221,7 +226,7 @@ def run_cel(config, trainset, testset):
 
     device = torch.device(config.device)
 
-    net = models.DenseNet(device=device, in_channels=config.in_channels, number_layers=config.layers, growth_rate=12, drop_rate=0.0)
+    net = models.DenseNet(device=device, in_channels=config.in_channels, number_layers=config.number_layers, growth_rate=12, drop_rate=0.0)
     logger.info("DenseNet Channels: %d", net.channels)
     fc_net = models.LinearNet(device=device, in_features=net.channels * (config.tensor_view[1] // 8) * (config.tensor_view[2] // 8))
 
