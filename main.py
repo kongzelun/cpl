@@ -206,16 +206,17 @@ def run(config, trainset, testset):
             torch.save(intra_class_distances, config.intra_class_distances_path)
 
             logger.info("Prototypes Count: %d", len(criterion.prototypes))
+        # end train
 
         # test
-        if not config.testonly:
+        if config.testonly:
             # load saved intra class distances
             if os.path.exists(config.intra_class_distances_path):
                 try:
                     intra_class_distances = torch.load(config.intra_class_distances_path)
                     logger.info("Load intra class distances from file '%s'.", config.intra_class_distances_path)
                 except RuntimeError:
-                    logger.error("Loading prototypes from file '%s' failed.", config.intra_class_distances_path)
+                    logger.error("Loading intra class distances from file '%s' failed.", config.intra_class_distances_path)
 
         detector = models.Detector(intra_class_distances, config.std_coefficient, trainset.label_set)
         logger.info("Distance Average: %s", detector.average_distances)
@@ -252,6 +253,7 @@ def run(config, trainset, testset):
             logger.info("Precision: %7.4f", precision)
             logger.info("Recall: %7.4f", recall)
             logger.info("Confusion Matrix: \n%s", cm)
+        # end test
 
 
 def run_cel(config, trainset, testset):
@@ -274,9 +276,9 @@ def run_cel(config, trainset, testset):
         state_dict = torch.load(config.model_path)
         try:
             net.load_state_dict(state_dict)
-            logger.info("Load state from file '%s'.", config.pkl_path)
+            logger.info("Load state from file '%s'.", config.model_path)
         except RuntimeError:
-            logger.error("Loading state from file '%s' failed.", config.pkl_path)
+            logger.error("Loading state from file '%s' failed.", config.model_path)
 
     for epoch in range(config.epoch_number):
         logger.info("Epoch number: %d", epoch + 1)
@@ -284,26 +286,28 @@ def run_cel(config, trainset, testset):
         probs = []
 
         # train
-        running_loss = 0.0
+        if not config.testonly:
+            running_loss = 0.0
 
-        for i, (feature, label) in enumerate(trainloader):
-            feature, label = feature.to(net.device), label.to(net.device)
-            sgd.zero_grad()
-            feature = net(feature).view(1, -1)
-            feature = fc_net(feature)
-            loss = cel(feature, label)
-            loss.backward()
-            sgd.step()
+            for i, (feature, label) in enumerate(trainloader):
+                feature, label = feature.to(net.device), label.to(net.device)
+                sgd.zero_grad()
+                feature = net(feature).view(1, -1)
+                feature = fc_net(feature)
+                loss = cel(feature, label)
+                loss.backward()
+                sgd.step()
 
-            feature = feature.squeeze()
+                feature = feature.data.squeeze()
 
-            running_loss += loss.item()
+                running_loss += loss.item()
 
-            probs.append((label.item(), feature[label.item()]))
-            logger.debug("[%d, %d] %7.4f", epoch + 1, i + 1, loss.item())
+                probs.append((label.item(), feature[label.item()]))
+                logger.debug("[%d, %d] %7.4f", epoch + 1, i + 1, loss.item())
 
-        torch.save(net.state_dict(), config.model_path)
-        torch.save(probs, config.probs_path)
+            torch.save(net.state_dict(), config.model_path)
+            torch.save(probs, config.probs_path)
+        # end train
 
         # load saved probs
         if config.testonly:
@@ -311,30 +315,41 @@ def run_cel(config, trainset, testset):
                 try:
                     probs = torch.load(config.probs_path)
                 except RuntimeError:
-                    logger.error("Loading state from file '%s' failed.", config.pkl_path)
+                    logger.error("Loading probs from file '%s' failed.", config.probs_path)
                 else:
-                    logger.info("Load state from file '%s'.", config.pkl_path)
+                    logger.info("Load probs from file '%s'.", config.probs_path)
 
         # test
+        detector = models.SoftmaxDetector(probs, config.std_coefficient, trainset.label_set)
+
         if (epoch + 1) % config.testfreq == 0 or config.testonly:
 
-            labels_true = []
-            labels_predicted = []
+            detection_results = []
+            with torch.no_grad():
+                for i, (feature, label) in enumerate(testloader):
+                    feature, label = feature.to(net.device), label.item()
+                    feature = net(feature).view(1, -1)
+                    probability, predicted_label = fc_net(feature).max(dim=1)
+                    detected_novelty = detector(predicted_label, probability)
+                    real_novelty = label not in trainset.label_set
 
-            for i, (feature, label) in enumerate(testloader):
-                feature, label = feature.to(net.device), label.item()
-                feature = net(feature).view(1, -1)
-                probability, predicted_label = fc_net(feature).max(dim=1)
+                    detection_results.append((label, predicted_label.item(), probability, real_novelty, detected_novelty))
+                    logger.debug("%5d: %d, %d, %7.4f, %s, %s", i + 1, label, predicted_label, probability, real_novelty, detected_novelty)
 
-                labels_true.append(label)
-                labels_predicted.append(predicted_label)
+            true_positive, false_positive, false_negative = detector.evaluate(detection_results)
+            precision = true_positive / (true_positive + false_positive + 1)
+            recall = true_positive / (true_positive + false_negative + 1)
+            cm = confusion_matrix(detector.results['true_label'], detector.results['predicted_label'], sorted(list(testset.label_set)))
+            results = detector.results[np.isin(detector.results['true_label'], list(testset.label_set))]
 
-                logger.debug("%5d: %d, %d", i + 1, label, predicted_label)
-
-            cm = confusion_matrix(labels_true, labels_predicted, sorted(list(testset.label_set)))
-
-            logger.info("Accuracy: %7.4f", accuracy_score(labels_true, labels_predicted))
+            logger.info("Accuracy: %7.4f", accuracy_score(results['true_label'], results['predicted_label']))
+            logger.info("True Positive: %d", true_positive)
+            logger.info("False Positive: %d", false_positive)
+            logger.info("False Negative: %d", false_negative)
+            logger.info("Precision: %7.4f", precision)
+            logger.info("Recall: %7.4f", recall)
             logger.info("Confusion Matrix: \n%s", cm)
+        # end test
 
 
 def main():
@@ -364,6 +379,7 @@ def main():
     config.model_path = os.path.join(config.running_path, "model.pkl")
     config.prototypes_path = os.path.join(config.running_path, "prototypes.pkl")
     config.intra_class_distances_path = os.path.join(config.running_path, "distances.pkl")
+    config.probs_path = os.path.join(config.running_path, "probs.pkl")
     config.epoch_number = args.epoch
     config.device = "cuda:0" if torch.cuda.is_available() else "cpu"
     config.testonly = args.testonly

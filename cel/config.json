@@ -1,4 +1,5 @@
 {
+  "testonly": true,
   "dataset_path": "data/fashion-mnist_stream.csv",
   "loss_type": "cel",
   "tensor_view": [

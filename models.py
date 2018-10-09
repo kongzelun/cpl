@@ -365,8 +365,8 @@ class Detector(object):
 class SoftmaxDetector(object):
     def __init__(self, probs, std_coefficient, known_labels):
         self.probs = np.array(probs, dtype=[('label', np.float), ('prob', np.float)])
-        self.mean_prob = {l: np.average(probs[probs['label'] == l]['prob']) for l in known_labels}
-        self.std_prob = {l: probs[probs['label'] == l]['prob'].std() for l in known_labels}
+        self.mean_prob = {l: np.average(self.probs[self.probs['label'] == l]['prob']) for l in known_labels}
+        self.std_prob = {l: self.probs[self.probs['label'] == l]['prob'].std() for l in known_labels}
         self.std_coefficient = std_coefficient
         self.known_labels = known_labels
         self.thresholds = {l: self.mean_prob[l] + (self.std_coefficient * self.std_prob[l]) for l in known_labels}
