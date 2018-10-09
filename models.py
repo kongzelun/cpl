@@ -302,7 +302,10 @@ class PairwiseDCELoss(DCELoss):
         return dec_loss + self.lambda_ * pw_loss, min_distance
 
     def _g(self, z):
-        return (1 + (self.gamma * z).exp()).log() / self.gamma
+        if z > 10:
+            return z
+        else:
+            return (1 + (self.gamma * z).exp()).log() / self.gamma
 
     def set_tao(self, value):
         self.tao = value
