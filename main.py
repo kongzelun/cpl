@@ -242,10 +242,9 @@ def run(config, trainset, testset):
 
             precision = true_positive / (true_positive + false_positive + 1)
             recall = true_positive / (true_positive + false_negative + 1)
-
             cm = confusion_matrix(detector.results['true_label'], detector.results['predicted_label'], sorted(list(testset.label_set)))
+            results = detector.results[np.isin(detector.results['true_label'], list(trainset.label_set))]
 
-            results = detector.results[np.isin(detector.results['true_label'], list(testset.label_set))]
             logger.info("Accuracy: %7.4f", accuracy_score(results['true_label'], results['predicted_label']))
             logger.info("True Positive: %d", true_positive)
             logger.info("False Positive: %d", false_positive)
@@ -340,7 +339,7 @@ def run_cel(config, trainset, testset):
             precision = true_positive / (true_positive + false_positive + 1)
             recall = true_positive / (true_positive + false_negative + 1)
             cm = confusion_matrix(detector.results['true_label'], detector.results['predicted_label'], sorted(list(testset.label_set)))
-            results = detector.results[np.isin(detector.results['true_label'], list(testset.label_set))]
+            results = detector.results[np.isin(detector.results['true_label'], list(trainset.label_set))]
 
             logger.info("Accuracy: %7.4f", accuracy_score(results['true_label'], results['predicted_label']))
             logger.info("True Positive: %d", true_positive)
