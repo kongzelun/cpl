@@ -3,10 +3,10 @@
   "loss_type": "pdce",
   "tensor_view": [
     -1,
-    32,
-    32
+    64,
+    64
   ],
-  "in_channels": 4,
+  "in_channels": 1,
   "number_layers": 10,
   "growth_rate": 12,
   "learning_rate": 0.001,
