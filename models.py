@@ -124,20 +124,21 @@ class Prototypes(object):
         min_distance = 0.0
         closest_prototype = Prototype(feature, label)
 
-        if label not in self._dict:
-            self._append(feature, label)
-        else:
-            # find closest prototype from prototypes in corresponding class
-            prototypes = self.get(label)
-            distances = compute_multi_distance(feature, torch.cat(prototypes))
-            distance, closest_prototype_index = distances.min(dim=0)
-            min_distance = distance.item()
-
-            if min_distance < self.threshold:
-                closest_prototype = self._dict[label][closest_prototype_index]
-                closest_prototype.update(feature)
-            else:
+        with torch.no_grad():
+            if label not in self._dict:
                 self._append(feature, label)
+            else:
+                # find closest prototype from prototypes in corresponding class
+                prototypes = self.get(label)
+                distances = compute_multi_distance(feature, torch.cat(prototypes))
+                distance, closest_prototype_index = distances.min(dim=0)
+                min_distance = distance.item()
+
+                if min_distance < self.threshold:
+                    closest_prototype = self._dict[label][closest_prototype_index]
+                    closest_prototype.update(feature)
+                else:
+                    self._append(feature, label)
 
         return min_distance, closest_prototype
 
@@ -225,6 +226,8 @@ class DCELoss(nn.Module):
 
         if one.item() > 0.0:
             prob /= one
+        else:
+            prob = 1e-6
 
         return prob
 

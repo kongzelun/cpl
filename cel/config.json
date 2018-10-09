@@ -1,14 +1,14 @@
 {
   "testonly": true,
-  "dataset_path": "data/fashion-mnist_stream.csv",
+  "dataset_path": "data/cifar10_stream.csv",
   "loss_type": "cel",
   "tensor_view": [
     -1,
-    28,
-    28
+    32,
+    32
   ],
-  "in_channels": 1,
-  "number_layers": 8,
+  "in_channels": 3,
+  "number_layers": 10,
   "growth_rate": 12,
   "learning_rate": 0.001,
   "lambda_": 0.01,

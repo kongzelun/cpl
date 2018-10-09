@@ -121,13 +121,13 @@ def run(config, trainset, testset):
         raise RuntimeError('Cannot find "{}" loss type.'.format(config.loss_type))
 
     # load saved optim
-    if os.path.exists(config.model_path):
-        state_dict = torch.load(config.optim_path)
-        try:
-            net.load_state_dict(state_dict)
-            logger.info("Load model from file '%s'.", config.model_path)
-        except RuntimeError:
-            logger.error("Loading model from file '%s' failed.", config.model_path)
+    # if os.path.exists(config.model_path):
+    #     state_dict = torch.load(config.optim_path)
+    #     try:
+    #         net.load_state_dict(state_dict)
+    #         logger.info("Load model from file '%s'.", config.model_path)
+    #     except RuntimeError:
+    #         logger.error("Loading model from file '%s' failed.", config.model_path)
 
     sgd = optim.SGD(net.parameters(), lr=config.learning_rate, momentum=0.9)
     # adam = optim.Adam(net.parameters(), lr=config.learning_rate)
