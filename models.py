@@ -360,3 +360,40 @@ class Detector(object):
         # recall = true_positive / (true_positive + false_negative)
 
         return true_positive, false_positive, false_negative
+
+
+class SoftmaxDetector(object):
+    def __init__(self, probs, std_coefficient, known_labels):
+        self.probs = np.array(probs, dtype=[('label', np.float), ('prob', np.float)])
+        self.mean_prob = {l: np.average(probs[probs['label'] == l]['prob']) for l in known_labels}
+        self.std_prob = {l: probs[probs['label'] == l]['prob'].std() for l in known_labels}
+        self.std_coefficient = std_coefficient
+        self.known_labels = known_labels
+        self.thresholds = {l: self.mean_prob[l] + (self.std_coefficient * self.std_prob[l]) for l in known_labels}
+        self.results = None
+
+    def __call__(self, predicted_label, prob):
+        novelty = False
+        if predicted_label not in self.known_labels or prob < self.thresholds[predicted_label]:
+            novelty = True
+
+        return novelty
+
+    def evaluate(self, results):
+        self.results = np.array(results, dtype=[
+            ('true_label', np.int32),
+            ('predicted_label', np.int32),
+            ('probability', np.float32),
+            ('real_novelty', np.bool),
+            ('detected_novelty', np.bool)
+        ])
+
+        real_novelties = self.results[self.results['real_novelty']]
+        detected_novelties = self.results[self.results['detected_novelty']]
+        detected_real_novelties = self.results[self.results['detected_novelty'] & self.results['real_novelty']]
+
+        true_positive = len(detected_real_novelties)
+        false_positive = len(detected_novelties) - len(detected_real_novelties)
+        false_negative = len(real_novelties) - len(detected_real_novelties)
+
+        return true_positive, false_positive, false_negative

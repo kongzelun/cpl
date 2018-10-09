@@ -49,6 +49,7 @@ class Config(object):
     model_path = None
     prototypes_path = None
     intra_class_distances_path = None
+    probs_path = None
 
     device = "cpu"
 
@@ -280,6 +281,8 @@ def run_cel(config, trainset, testset):
     for epoch in range(config.epoch_number):
         logger.info("Epoch number: %d", epoch + 1)
 
+        probs = []
+
         # train
         running_loss = 0.0
 
@@ -292,11 +295,25 @@ def run_cel(config, trainset, testset):
             loss.backward()
             sgd.step()
 
+            feature = feature.squeeze()
+
             running_loss += loss.item()
 
+            probs.append((label.item(), feature[label.item()]))
             logger.debug("[%d, %d] %7.4f", epoch + 1, i + 1, loss.item())
 
         torch.save(net.state_dict(), config.model_path)
+        torch.save(probs, config.probs_path)
+
+        # load saved probs
+        if config.testonly:
+            if os.path.exists(config.probs_path):
+                try:
+                    probs = torch.load(config.probs_path)
+                except RuntimeError:
+                    logger.error("Loading state from file '%s' failed.", config.pkl_path)
+                else:
+                    logger.info("Load state from file '%s'.", config.pkl_path)
 
         # test
         if (epoch + 1) % config.testfreq == 0 or config.testonly:
@@ -361,6 +378,7 @@ def main():
                 os.remove(config.model_path)
                 os.remove(config.prototypes_path)
                 os.remove(config.intra_class_distances_path)
+                os.remove(config.probs_path)
                 # os.remove("{}/config_dump.json".format(args.dir))
             except FileNotFoundError:
                 pass

@@ -19,6 +19,7 @@
       <w>mnist</w>
       <w>optim</w>
       <w>pdce</w>
+      <w>probs</w>
       <w>pwdce</w>
       <w>relu</w>
       <w>softmax</w>

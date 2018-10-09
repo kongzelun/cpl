@@ -1,12 +1,12 @@
 {
-  "dataset_path": "data/lsun_stream.csv",
+  "dataset_path": "data/fashion-mnist_stream.csv",
   "loss_type": "cel",
   "tensor_view": [
     -1,
-    32,
-    32
+    28,
+    28
   ],
-  "in_channels": 4,
+  "in_channels": 1,
   "number_layers": 8,
   "growth_rate": 12,
   "learning_rate": 0.001,
