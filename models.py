@@ -81,6 +81,7 @@ class LinearNet(nn.Module):
         self.fc1 = nn.Linear(in_features, 1000)
         self.fc2 = nn.Linear(1000, 100)
         self.fc3 = nn.Linear(100, 10)
+        self.softmax = nn.Softmax(dim=1)
 
         self.relu = nn.ReLU(inplace=True)
 
@@ -90,7 +91,7 @@ class LinearNet(nn.Module):
     def forward(self, x):
         out = self.relu(self.fc1(x))
         out = self.relu(self.fc2(out))
-        out = self.fc3(out)
+        out = self.softmax(self.fc3(out))
         return out
 
 
