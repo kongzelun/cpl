@@ -69,8 +69,7 @@ class DenseNet(nn.Module):
         out = self.trans1(self.block1(out))
         out = self.trans2(self.block2(out))
         out = self.block3(out)
-        # out = self.relu(self.bn1(out))
-        out = self.relu(out)
+        out = self.relu(self.bn1(out))
         out = self.pooling(out)
         return out
 

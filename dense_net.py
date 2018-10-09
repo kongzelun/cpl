@@ -11,8 +11,8 @@ class BasicBlock(nn.Module):
         self.dropout = nn.Dropout(p=drop_rate, inplace=False)
 
     def forward(self, x):
-        # out = self.dropout(self.conv1(self.relu(self.bn1(x))))
-        out = self.dropout(self.conv1(self.relu(x)))
+        out = self.dropout(self.conv1(self.relu(self.bn1(x))))
+        # out = self.dropout(self.conv1(self.relu(x)))
         return torch.cat([x, out], dim=1)
 
 
@@ -32,10 +32,10 @@ class BottleneckBlock(nn.Module):
         self.dropout = nn.Dropout(p=drop_rate, inplace=False)
 
     def forward(self, x):
-        # out = self.dropout(self.conv1(self.relu(self.bn1(x))))
-        # out = self.dropout(self.conv2(self.relu(self.bn2(out))))
-        out = self.dropout(self.conv1(self.relu(x)))
-        out = self.dropout(self.conv2(self.relu(out)))
+        out = self.dropout(self.conv1(self.relu(self.bn1(x))))
+        out = self.dropout(self.conv2(self.relu(self.bn2(out))))
+        # out = self.dropout(self.conv1(self.relu(x)))
+        # out = self.dropout(self.conv2(self.relu(out)))
         return torch.cat([x, out], dim=1)
 
 
@@ -49,8 +49,8 @@ class TransitionBlock(nn.Module):
         self.pooling = nn.AvgPool2d(kernel_size=2)
 
     def forward(self, x):
-        # return self.pooling(self.dropout(self.conv1(self.relu(self.bn1(x)))))
-        return self.pooling(self.dropout(self.conv1(self.relu(x))))
+        return self.pooling(self.dropout(self.conv1(self.relu(self.bn1(x)))))
+        # return self.pooling(self.dropout(self.conv1(self.relu(x))))
 
 
 class DenseBlock(nn.Module):

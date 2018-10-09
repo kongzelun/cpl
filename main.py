@@ -12,7 +12,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
-import torchvision
+# import torchvision
 import models
 from sklearn.metrics import accuracy_score, confusion_matrix
 
@@ -61,15 +61,15 @@ class Config(object):
 
 
 class DataSet(Dataset):
-    def __init__(self, dataset, tensor_view, transform):
+    def __init__(self, dataset, tensor_view):
         self.data = []
         self.label_set = set()
-        self.transform = transform
+        # self.transform = transform
 
         for s in dataset:
             x = (tensor(s[:-1], dtype=torch.float)).view(tensor_view)
             y = tensor(s[-1], dtype=torch.long)
-            x = self.transform(x)
+            # x = self.transform(x)
             self.data.append((x, y))
             self.label_set.add(int(s[-1]))
 
@@ -161,12 +161,12 @@ def run(config, trainset, testset):
             running_loss = 0.0
             distance_sum = 0.0
 
-            # if len(criterion.prototypes) > len(trainset.label_set):
-            #     criterion.clear_prototypes()
-            # else:
-            #     criterion.upgrade_prototypes()
+            if len(criterion.prototypes) > len(trainset.label_set):
+                criterion.clear_prototypes()
+            else:
+                criterion.upgrade_prototypes()
 
-            criterion.clear_prototypes()
+            # criterion.clear_prototypes()
 
             for i, (feature, label) in enumerate(trainloader):
                 feature, label = feature.to(net.device), label.item()
@@ -374,10 +374,10 @@ def main():
     random.shuffle(train_dataset)
     random.shuffle(test_dataset)
 
-    mean = [train_dataset[:, i:-1:config.tensor_view[0]].mean() for i in range(config.tensor_view[0])]
-    std = [train_dataset[:, i:-1:config.tensor_view[0]].std() for i in range(config.tensor_view[0])]
+    # mean = [train_dataset[:, i:-1:config.tensor_view[0]].mean() for i in range(config.tensor_view[0])]
+    # std = [train_dataset[:, i:-1:config.tensor_view[0]].std() for i in range(config.tensor_view[0])]
 
-    torchvision.transforms.Normalize(mean=mean, std=std)
+    # transform = torchvision.transforms.Normalize(mean=mean, std=std)
 
     trainset = DataSet(dataset[:config.train_test_split], config.tensor_view)
     testset = DataSet(dataset[config.train_test_split:], config.tensor_view)
