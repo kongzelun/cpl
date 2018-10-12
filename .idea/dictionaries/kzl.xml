@@ -4,6 +4,7 @@
       <w>argparse</w>
       <w>asctime</w>
       <w>cifar</w>
+      <w>cinic</w>
       <w>conv</w>
       <w>cuda</w>
       <w>dataloader</w>

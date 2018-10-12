@@ -220,15 +220,17 @@ class DCELoss(nn.Module):
 
     def probability(self, feature, label):
         distances = compute_multi_distance(feature, torch.cat(self.prototypes.get()))
-        one = (-self.gamma * distances.pow(2)).exp().sum()
+        one = (-self.gamma * distances).exp().sum()
+        # one = (-self.gamma * distances.pow(2)).exp().sum()
 
         distances = compute_multi_distance(feature, torch.cat(self.prototypes.get(label)))
-        prob = (-self.gamma * distances.pow(2)).exp().sum()
+        prob = (-self.gamma * distances).exp().sum()
+        # prob = (-self.gamma * distances.pow(2)).exp().sum()
 
         if one.item() > 0.0:
             prob /= one
         else:
-            prob = 1e-6
+            prob += 1e-6
 
         return prob
 
@@ -273,7 +275,8 @@ class PairwiseDCELoss(DCELoss):
 
         # pairwise loss
         distance = compute_distance(feature, prototype.feature)
-        pw_loss = self._g(self.b - (self.tao - distance.pow(2)))
+        pw_loss = self._g(self.b - (self.tao - distance))
+        # pw_loss = self._g(self.b - (self.tao - distance.pow(2)))
         #
         # for l in self.prototypes._dict:
         #     if l != label:
@@ -286,7 +289,8 @@ class PairwiseDCELoss(DCELoss):
         distance, closest_prototype_index = distances.min(dim=0)
         closest_prototype = self.prototypes[closest_prototype_index]
         like = 1 if closest_prototype.label == label else -1
-        pw_loss += self._g(self.b - like * (self.tao - distance.pow(2)))
+        pw_loss += self._g(self.b - like * (self.tao - distance))
+        # pw_loss += self._g(self.b - like * (self.tao - distance.pow(2)))
 
         # for p in self.prototypes:
         #     like = 1 if p.label == label else -1
@@ -303,10 +307,7 @@ class PairwiseDCELoss(DCELoss):
         return dec_loss + self.lambda_ * pw_loss, min_distance
 
     def _g(self, z):
-        if z > 10:
-            return z
-        else:
-            return (1 + (self.gamma * z).exp()).log() / self.gamma
+        return (1 + (self.gamma * z).exp()).log() / self.gamma
 
     def set_tao(self, value):
         self.tao = value

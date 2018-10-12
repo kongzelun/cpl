@@ -1,19 +1,19 @@
 {
-  "dataset_path": "data/lsun_stream.csv",
+  "dataset_path": "data/cinic_stream.csv",
   "loss_type": "pdce",
   "tensor_view": [
     -1,
-    64,
-    64
+    32,
+    32
   ],
-  "in_channels": 1,
+  "in_channels": 3,
   "number_layers": 10,
   "growth_rate": 12,
   "learning_rate": 0.001,
-  "threshold": 100.0,
-  "gamma": 0.01,
-  "tao": 100.0,
-  "b": 10.0,
+  "threshold": 20.0,
+  "gamma": 0.05,
+  "tao": 20.0,
+  "b": 2.0,
   "lambda_": 0.01,
   "std_coefficient": 0.1,
   "train_test_split": 6000

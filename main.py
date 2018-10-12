@@ -12,7 +12,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
-# import torchvision
+import torchvision
 import models
 from sklearn.metrics import accuracy_score, confusion_matrix
 
@@ -62,15 +62,15 @@ class Config(object):
 
 
 class DataSet(Dataset):
-    def __init__(self, dataset, tensor_view):
+    def __init__(self, dataset, tensor_view, transform):
         self.data = []
         self.label_set = set()
-        # self.transform = transform
+        self.transform = transform
 
         for s in dataset:
             x = (tensor(s[:-1], dtype=torch.float)).view(tensor_view)
             y = tensor(s[-1], dtype=torch.long)
-            # x = self.transform(x)
+            x = self.transform(x)
             self.data.append((x, y))
             self.label_set.add(int(s[-1]))
 
@@ -383,8 +383,8 @@ def main():
     config.device = "cuda:0" if torch.cuda.is_available() else "cpu"
     config.testonly = args.testonly
 
-    if config.testonly:
-        config.epoch_number = 1
+    if args.testfreq > 0:
+        config.testfreq = args.testfreq
 
     if args.clear:
         if input("Do you really want to clear the running directory? (y/[n]) ") == 'y':
@@ -398,6 +398,9 @@ def main():
             except FileNotFoundError:
                 pass
 
+    if config.testonly:
+        config.epoch_number = 1
+
     logger = setup_logger(level=logging.DEBUG, filename=config.log_path)
 
     # dataset = np.loadtxt(config.dataset_path, delimiter=',')
@@ -407,13 +410,13 @@ def main():
     random.shuffle(train_dataset)
     random.shuffle(test_dataset)
 
-    # mean = [train_dataset[:, i:-1:config.tensor_view[0]].mean() for i in range(config.tensor_view[0])]
-    # std = [train_dataset[:, i:-1:config.tensor_view[0]].std() for i in range(config.tensor_view[0])]
+    mean = [train_dataset[:, i:-1:config.in_channels].mean() for i in range(config.in_channels)]
+    std = [train_dataset[:, i:-1:config.in_channels].std() for i in range(config.in_channels)]
 
-    # transform = torchvision.transforms.Normalize(mean=mean, std=std)
+    transform = torchvision.transforms.Normalize(mean=mean, std=std)
 
-    trainset = DataSet(dataset[:config.train_test_split], config.tensor_view)
-    testset = DataSet(dataset[config.train_test_split:], config.tensor_view)
+    trainset = DataSet(dataset[:config.train_test_split], config.tensor_view, transform)
+    testset = DataSet(dataset[config.train_test_split:], config.tensor_view, transform)
 
     # import torchvision
     # transform = torchvision.transforms.Compose([torchvision.transforms.ToTensor()])

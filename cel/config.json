@@ -1,17 +1,1 @@
-{
-  "testonly": true,
-  "dataset_path": "data/cifar10_stream.csv",
-  "loss_type": "cel",
-  "tensor_view": [
-    -1,
-    32,
-    32
-  ],
-  "in_channels": 3,
-  "number_layers": 10,
-  "growth_rate": 12,
-  "learning_rate": 0.001,
-  "lambda_": 0.01,
-  "std_coefficient": 0.1,
-  "train_test_split": 6000
-}
+{"testonly": true, "dataset_path": "data/cifar10_stream.csv", "loss_type": "cel", "tensor_view": [-1, 32, 32], "in_channels": 3, "number_layers": 10, "growth_rate": 12, "learning_rate": 0.0005, "lambda_": 0.01, "std_coefficient": 0.1, "train_test_split": 6000, "threshold": null, "gamma": null, "tao": null, "b": null}
