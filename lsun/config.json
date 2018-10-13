@@ -9,12 +9,12 @@
   "in_channels": 1,
   "number_layers": 10,
   "growth_rate": 12,
-  "learning_rate": 0.001,
-  "threshold": 100.0,
-  "gamma": 0.01,
-  "tao": 100.0,
-  "b": 10.0,
+  "learning_rate": 0.00025,
+  "threshold": 8.877675652503967,
+  "gamma": 0.6109547136058741,
+  "tao": 5.141601920127869,
+  "b": 1.8680368661880493,
   "lambda_": 0.01,
-  "std_coefficient": 0.1,
+  "std_coefficient": 0.25,
   "train_test_split": 6000
 }

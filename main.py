@@ -192,7 +192,7 @@ def run(config, trainset, testset):
             std_distance = distances['distance'].std().item()
 
             config.threshold = (average_distance + 3 * std_distance)
-            config.gamma = 1 / average_distance
+            config.gamma = 2 / average_distance
             config.tao = average_distance + std_distance
             config.b = std_distance
 
