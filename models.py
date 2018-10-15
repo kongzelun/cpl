@@ -339,7 +339,7 @@ class Detector(object):
 
     def __call__(self, predicted_label, probability, distance):
         novelty = False
-        if (distance > self.thresholds[predicted_label] and probability < 0.75) or probability < 0.25:
+        if (distance > self.thresholds[predicted_label] and probability < 0.8) or probability < 0.2:
             novelty = True
 
         return novelty

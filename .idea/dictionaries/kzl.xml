@@ -32,6 +32,7 @@
       <w>torchvision</w>
       <w>trainloader</w>
       <w>trainset</w>
+      <w>tsne</w>
     </words>
   </dictionary>
 </component>

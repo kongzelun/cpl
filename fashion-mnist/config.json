@@ -1,0 +1,20 @@
+{
+  "dataset_path": "data/fashion-mnist_sample_2000.csv",
+  "loss_type": "pdce",
+  "tensor_view": [
+    -1,
+    28,
+    28
+  ],
+  "in_channels": 1,
+  "number_layers": 8,
+  "growth_rate": 12,
+  "learning_rate": 0.001,
+  "threshold": 5.903074502944946,
+  "gamma": 0.32073795276195083,
+  "tao": 5.903074502944946,
+  "b": 0.696316123008728,
+  "lambda_": 0.01,
+  "std_coefficient": 1.0,
+  "train_test_split": 6000
+}

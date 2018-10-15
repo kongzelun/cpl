@@ -12,9 +12,10 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
-import torchvision
 import models
 from sklearn.metrics import accuracy_score, confusion_matrix
+from matplotlib import pyplot as plt
+from sklearn.manifold import TSNE
 
 
 class Config(object):
@@ -62,7 +63,7 @@ class Config(object):
 
 
 class DataSet(Dataset):
-    def __init__(self, dataset, tensor_view, transform):
+    def __init__(self, dataset, tensor_view, transform=None):
         self.data = []
         self.label_set = set()
         self.transform = transform
@@ -70,7 +71,10 @@ class DataSet(Dataset):
         for s in dataset:
             x = (tensor(s[:-1], dtype=torch.float)).view(tensor_view)
             y = tensor(s[-1], dtype=torch.long)
-            x = self.transform(x)
+
+            if self.transform:
+                x = self.transform(x)
+
             self.data.append((x, y))
             self.label_set.add(int(s[-1]))
 
@@ -120,17 +124,17 @@ def run(config, trainset, testset):
     else:
         raise RuntimeError('Cannot find "{}" loss type.'.format(config.loss_type))
 
+    sgd = optim.SGD(net.parameters(), lr=config.learning_rate, momentum=0.9)
+    # adam = optim.Adam(net.parameters(), lr=config.learning_rate)
+
     # load saved optim
     # if os.path.exists(config.model_path):
     #     state_dict = torch.load(config.optim_path)
     #     try:
     #         net.load_state_dict(state_dict)
-    #         logger.info("Load model from file '%s'.", config.model_path)
+    #         logger.info("Load optim from file '%s'.", config.optim_path)
     #     except RuntimeError:
-    #         logger.error("Loading model from file '%s' failed.", config.model_path)
-
-    sgd = optim.SGD(net.parameters(), lr=config.learning_rate, momentum=0.9)
-    # adam = optim.Adam(net.parameters(), lr=config.learning_rate)
+    #         logger.error("Loading optim from file '%s' failed.", config.optim_path)
 
     # load saved model state dict
     if os.path.exists(config.model_path):
@@ -166,8 +170,6 @@ def run(config, trainset, testset):
                 criterion.clear_prototypes()
             else:
                 criterion.upgrade_prototypes()
-
-            # criterion.clear_prototypes()
 
             for i, (feature, label) in enumerate(trainloader):
                 feature, label = feature.to(net.device), label.item()
@@ -246,6 +248,7 @@ def run(config, trainset, testset):
             results = detector.results[np.isin(detector.results['true_label'], list(trainset.label_set))]
 
             logger.info("Accuracy: %7.4f", accuracy_score(results['true_label'], results['predicted_label']))
+            # logger.info("Accuracy: %7.4f", accuracy_score(detector.results['true_label'], detector.results['predicted_label']))
             logger.info("True Positive: %d", true_positive)
             logger.info("False Positive: %d", false_positive)
             logger.info("False Negative: %d", false_negative)
@@ -361,6 +364,7 @@ def main():
     parser.add_argument('-f', '--testfreq', type=int, help="Test frequency.", default=1)
     parser.add_argument('-t', '--testonly', help="Test only.", action="store_true")
     parser.add_argument('-c', '--clear', help="Clear running path.", action="store_true")
+    parser.add_argument('-v', '--visualize', help="Visualization.", action="store_true")
 
     args = parser.parse_args()
 
@@ -410,13 +414,13 @@ def main():
     random.shuffle(train_dataset)
     random.shuffle(test_dataset)
 
-    mean = [train_dataset[:, i:-1:config.in_channels].mean() for i in range(config.in_channels)]
-    std = [train_dataset[:, i:-1:config.in_channels].std() for i in range(config.in_channels)]
+    # mean = [train_dataset[:, i:-1:config.in_channels].mean() for i in range(config.in_channels)]
+    # std = [train_dataset[:, i:-1:config.in_channels].std() for i in range(config.in_channels)]
+    #
+    # transform = torchvision.transforms.Normalize(mean=mean, std=std)
 
-    transform = torchvision.transforms.Normalize(mean=mean, std=std)
-
-    trainset = DataSet(dataset[:config.train_test_split], config.tensor_view, transform)
-    testset = DataSet(dataset[config.train_test_split:], config.tensor_view, transform)
+    trainset = DataSet(dataset[:config.train_test_split], config.tensor_view)
+    testset = DataSet(dataset[config.train_test_split:], config.tensor_view)
 
     # import torchvision
     # transform = torchvision.transforms.Compose([torchvision.transforms.ToTensor()])
@@ -428,10 +432,13 @@ def main():
     logger.info("Trainset size: %d", len(trainset))
     logger.info("Testset size: %d", len(testset))
 
-    if config.loss_type == 'cel':
-        run_cel(config, trainset, testset)
+    if args.visualize:
+        visualization(config, trainset)
     else:
-        run(config, trainset, testset)
+        if config.loss_type == 'cel':
+            run_cel(config, trainset, testset)
+        else:
+            run(config, trainset, testset)
 
     with open(config_file, mode='w') as file:
         config_dict['learning_rate'] = config.learning_rate / 2
@@ -442,6 +449,64 @@ def main():
         json.dump(config_dict, file)
 
     logger.info("---------- %.3fs ----------", time.time() - start_time)
+
+
+def visualization(config, trainset):
+    logger = logging.getLogger(__name__)
+
+    trainloader = DataLoader(dataset=trainset, batch_size=1, shuffle=False, num_workers=4)
+
+    # net = models.CNNNet(device=device)
+    net = models.DenseNet(device=torch.device(config.device),
+                          in_channels=config.in_channels,
+                          number_layers=config.number_layers,
+                          growth_rate=config.growth_rate,
+                          drop_rate=0.0)
+    logger.info("DenseNet Channels: %d", net.channels)
+
+    if config.loss_type == 'gcpl':
+        criterion = models.GCPLLoss(threshold=config.threshold, gamma=config.gamma, lambda_=config.lambda_)
+    elif config.loss_type == 'pdce':
+        criterion = models.PairwiseDCELoss(threshold=config.threshold, tao=config.tao, b=config.b, lambda_=config.lambda_)
+    else:
+        raise RuntimeError('Cannot find "{}" loss type.'.format(config.loss_type))
+
+    # load saved model state dict
+    if os.path.exists(config.model_path):
+        state_dict = torch.load(config.model_path)
+        try:
+            net.load_state_dict(state_dict)
+            logger.info("Load model from file '%s'.", config.model_path)
+        except RuntimeError:
+            logger.error("Loading model from file '%s' failed.", config.model_path)
+
+    # load saved prototypes
+    if os.path.exists(config.prototypes_path):
+        try:
+            criterion.load_prototypes(config.prototypes_path)
+            logger.info("Load prototypes from file '%s'.", config.prototypes_path)
+        except RuntimeError:
+            logger.error("Loading prototypes from file '%s' failed.", config.prototypes_path)
+
+    features = []
+    labels = []
+
+    for i, (feature, label) in enumerate(trainloader):
+        feature, label = net(feature.to(net.device)).view(-1), label.item()
+
+        features.append(feature.cpu().detach().numpy())
+        labels.append(label)
+
+    features = np.array(features)
+    labels = np.array(labels)
+
+    feature_tsne = TSNE(n_components=2, random_state=30)
+    features = feature_tsne.fit_transform(features, labels)
+
+    plt.figure(figsize=(6, 4))
+    plt.scatter(features[:, 0], features[:, 1], c=labels, label="Our Method")
+    plt.legend()
+    plt.show()
 
 
 if __name__ == '__main__':

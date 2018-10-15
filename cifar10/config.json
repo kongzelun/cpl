@@ -1,0 +1,20 @@
+{
+  "dataset_path": "data/cifar10_stream.csv",
+  "loss_type": "pdce",
+  "tensor_view": [
+    -1,
+    32,
+    32
+  ],
+  "in_channels": 3,
+  "number_layers": 10,
+  "growth_rate": 12,
+  "learning_rate": 0.0005,
+  "threshold": 56.00536870956421,
+  "gamma": 0.05225688009019128,
+  "tao": 44.18343782424927,
+  "b": 5.910965442657471,
+  "lambda_": 0.01,
+  "std_coefficient": 0.0,
+  "train_test_split": 6000
+}
