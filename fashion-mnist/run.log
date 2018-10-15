@@ -129,8 +129,192 @@
  [  14    3  195  116 4609   65]
  [ 990    6  538   97 1072 2290]]
 2018-10-05 23:13:59,877: ------ 6140.708s ------
-[2018-10-15 11:57:30,230] ********************************************************************************
-[2018-10-15 11:57:30,230] {'dataset_path': 'data/fashion-mnist_sample_2000.csv', 'loss_type': 'pdce', 'tensor_view': [-1, 28, 28], 'in_channels': 1, 'number_layers': 8, 'growth_rate': 12, 'learning_rate': 0.001, 'threshold': 5.903074502944946, 'gamma': 0.32073795276195083, 'tao': 5.903074502944946, 'b': 0.696316123008728, 'lambda_': 0.01, 'std_coefficient': 1.0, 'train_test_split': 6000}
-[2018-10-15 11:57:30,231] Trainset size: 2000
-[2018-10-15 11:57:30,231] Testset size: 0
-[2018-10-15 11:57:30,253] DenseNet Channels: 174
+[2018-10-15 11:48:10,822] ********************************************************************************
+[2018-10-15 11:48:10,822] {'dataset_path': 'data/fashion-mnist_sample_2000.csv', 'loss_type': 'pdce', 'tensor_view': [-1, 28, 28], 'in_channels': 1, 'number_layers': 8, 'growth_rate': 12, 'learning_rate': 0.001, 'threshold': 5.903074502944946, 'gamma': 0.32073795276195083, 'tao': 5.903074502944946, 'b': 0.696316123008728, 'lambda_': 0.01, 'std_coefficient': 1.0, 'train_test_split': 6000}
+[2018-10-15 11:48:10,823] Trainset size: 0
+[2018-10-15 11:48:10,823] Testset size: 2000
+[2018-10-15 11:48:12,318] DenseNet Channels: 174
+[2018-10-15 11:50:16,489] ********************************************************************************
+[2018-10-15 11:50:16,489] {'dataset_path': 'data/fashion-mnist_sample_2000.csv', 'loss_type': 'pdce', 'tensor_view': [-1, 28, 28], 'in_channels': 1, 'number_layers': 8, 'growth_rate': 12, 'learning_rate': 0.001, 'threshold': 5.903074502944946, 'gamma': 0.32073795276195083, 'tao': 5.903074502944946, 'b': 0.696316123008728, 'lambda_': 0.01, 'std_coefficient': 1.0, 'train_test_split': 6000}
+[2018-10-15 11:50:16,490] Trainset size: 0
+[2018-10-15 11:50:16,490] Testset size: 2000
+[2018-10-15 11:50:18,050] DenseNet Channels: 174
+[2018-10-15 11:50:31,682] ********************************************************************************
+[2018-10-15 11:50:31,682] {'dataset_path': 'data/fashion-mnist_sample_2000.csv', 'loss_type': 'pdce', 'tensor_view': [-1, 28, 28], 'in_channels': 1, 'number_layers': 8, 'growth_rate': 12, 'learning_rate': 0.001, 'threshold': 5.903074502944946, 'gamma': 0.32073795276195083, 'tao': 5.903074502944946, 'b': 0.696316123008728, 'lambda_': 0.01, 'std_coefficient': 1.0, 'train_test_split': 6000}
+[2018-10-15 11:50:31,682] Trainset size: 0
+[2018-10-15 11:50:31,682] Testset size: 2000
+[2018-10-15 11:50:33,091] DenseNet Channels: 174
+[2018-10-15 11:50:33,191] Loading model from file 'fashion-mnist/model.pkl' failed.
+[2018-10-15 11:50:33,192] Load prototypes from file 'fashion-mnist/prototypes.pkl'.
+[2018-10-15 11:55:04,153] ********************************************************************************
+[2018-10-15 11:55:04,153] {'dataset_path': 'data/fashion-mnist_sample_2000.csv', 'loss_type': 'pdce', 'tensor_view': [-1, 28, 28], 'in_channels': 1, 'number_layers': 8, 'growth_rate': 12, 'learning_rate': 0.001, 'threshold': 5.903074502944946, 'gamma': 0.32073795276195083, 'tao': 5.903074502944946, 'b': 0.696316123008728, 'lambda_': 0.01, 'std_coefficient': 1.0, 'train_test_split': 6000}
+[2018-10-15 11:55:04,153] Trainset size: 2000
+[2018-10-15 11:55:04,153] Testset size: 0
+[2018-10-15 11:55:05,668] DenseNet Channels: 174
+[2018-10-15 11:55:05,771] Loading model from file 'fashion-mnist/model.pkl' failed.
+[2018-10-15 11:55:05,772] Load prototypes from file 'fashion-mnist/prototypes.pkl'.
+[2018-10-15 11:55:36,333] ********************************************************************************
+[2018-10-15 11:55:36,333] {'dataset_path': 'data/fashion-mnist_sample_2000.csv', 'loss_type': 'pdce', 'tensor_view': [-1, 28, 28], 'in_channels': 1, 'number_layers': 8, 'growth_rate': 12, 'learning_rate': 0.001, 'threshold': 5.903074502944946, 'gamma': 0.32073795276195083, 'tao': 5.903074502944946, 'b': 0.696316123008728, 'lambda_': 0.01, 'std_coefficient': 1.0, 'train_test_split': 6000}
+[2018-10-15 11:55:36,341] Trainset size: 2000
+[2018-10-15 11:55:36,342] Testset size: 0
+[2018-10-15 11:55:37,782] DenseNet Channels: 174
+[2018-10-15 11:55:37,905] Loading model from file 'fashion-mnist/model.pkl' failed.
+[2018-10-15 11:55:37,906] Load prototypes from file 'fashion-mnist/prototypes.pkl'.
+[2018-10-15 11:56:06,352] ********************************************************************************
+[2018-10-15 11:56:06,352] {'dataset_path': 'data/fashion-mnist_sample_2000.csv', 'loss_type': 'pdce', 'tensor_view': [-1, 28, 28], 'in_channels': 1, 'number_layers': 8, 'growth_rate': 12, 'learning_rate': 0.001, 'threshold': 5.903074502944946, 'gamma': 0.32073795276195083, 'tao': 5.903074502944946, 'b': 0.696316123008728, 'lambda_': 0.01, 'std_coefficient': 1.0, 'train_test_split': 6000}
+[2018-10-15 11:56:06,353] Trainset size: 2000
+[2018-10-15 11:56:06,353] Testset size: 0
+[2018-10-15 11:56:07,831] DenseNet Channels: 174
+[2018-10-15 11:56:07,940] Loading model from file 'fashion-mnist/model.pkl' failed.
+[2018-10-15 11:56:07,941] Load prototypes from file 'fashion-mnist/prototypes.pkl'.
+[2018-10-15 11:58:21,494] ********************************************************************************
+[2018-10-15 11:58:21,495] {'dataset_path': 'data/fashion-mnist_sample_2000.csv', 'loss_type': 'pdce', 'tensor_view': [-1, 28, 28], 'in_channels': 1, 'number_layers': 8, 'growth_rate': 12, 'learning_rate': 0.001, 'threshold': 5.903074502944946, 'gamma': 0.32073795276195083, 'tao': 5.903074502944946, 'b': 0.696316123008728, 'lambda_': 0.01, 'std_coefficient': 1.0, 'train_test_split': 6000}
+[2018-10-15 11:58:21,495] Trainset size: 2000
+[2018-10-15 11:58:21,495] Testset size: 0
+[2018-10-15 11:58:23,163] DenseNet Channels: 174
+[2018-10-15 11:58:23,266] Loading model from file 'fashion-mnist/model.pkl' failed.
+[2018-10-15 11:58:23,268] Load prototypes from file 'fashion-mnist/prototypes.pkl'.
+[2018-10-15 11:59:30,504] ********************************************************************************
+[2018-10-15 11:59:30,505] {'dataset_path': 'data/fashion-mnist_sample_2000.csv', 'loss_type': 'pdce', 'tensor_view': [-1, 28, 28], 'in_channels': 1, 'number_layers': 8, 'growth_rate': 12, 'learning_rate': 0.001, 'threshold': 5.903074502944946, 'gamma': 0.32073795276195083, 'tao': 5.903074502944946, 'b': 0.696316123008728, 'lambda_': 0.01, 'std_coefficient': 1.0, 'train_test_split': 6000}
+[2018-10-15 11:59:30,506] Trainset size: 2000
+[2018-10-15 11:59:30,506] Testset size: 0
+[2018-10-15 11:59:31,917] DenseNet Channels: 174
+[2018-10-15 11:59:32,004] Loading model from file 'fashion-mnist/model.pkl' failed.
+[2018-10-15 11:59:32,006] Load prototypes from file 'fashion-mnist/prototypes.pkl'.
+[2018-10-15 12:00:34,338] ********************************************************************************
+[2018-10-15 12:00:34,339] {'dataset_path': 'data/fashion-mnist_sample_2000.csv', 'loss_type': 'pdce', 'tensor_view': [-1, 28, 28], 'in_channels': 1, 'number_layers': 8, 'growth_rate': 12, 'learning_rate': 0.001, 'threshold': 5.903074502944946, 'gamma': 0.32073795276195083, 'tao': 5.903074502944946, 'b': 0.696316123008728, 'lambda_': 0.01, 'std_coefficient': 1.0, 'train_test_split': 6000}
+[2018-10-15 12:00:34,339] Trainset size: 2000
+[2018-10-15 12:00:34,340] Testset size: 0
+[2018-10-15 12:00:35,851] DenseNet Channels: 174
+[2018-10-15 12:00:35,939] Loading model from file 'fashion-mnist/model.pkl' failed.
+[2018-10-15 12:00:35,941] Load prototypes from file 'fashion-mnist/prototypes.pkl'.
+[2018-10-15 12:01:48,894] ********************************************************************************
+[2018-10-15 12:01:48,894] {'dataset_path': 'data/fashion-mnist_sample_2000.csv', 'loss_type': 'pdce', 'tensor_view': [-1, 28, 28], 'in_channels': 1, 'number_layers': 8, 'growth_rate': 12, 'learning_rate': 0.001, 'threshold': 5.903074502944946, 'gamma': 0.32073795276195083, 'tao': 5.903074502944946, 'b': 0.696316123008728, 'lambda_': 0.01, 'std_coefficient': 1.0, 'train_test_split': 6000}
+[2018-10-15 12:01:48,895] Trainset size: 2000
+[2018-10-15 12:01:48,895] Testset size: 0
+[2018-10-15 12:01:50,251] DenseNet Channels: 174
+[2018-10-15 12:01:50,336] Loading model from file 'fashion-mnist/model.pkl' failed.
+[2018-10-15 12:01:50,337] Load prototypes from file 'fashion-mnist/prototypes.pkl'.
+[2018-10-15 12:05:35,386] ********************************************************************************
+[2018-10-15 12:05:35,386] {'dataset_path': 'data/fashion-mnist_sample_2000.csv', 'loss_type': 'pdce', 'tensor_view': [-1, 28, 28], 'in_channels': 1, 'number_layers': 8, 'growth_rate': 12, 'learning_rate': 0.001, 'threshold': 5.903074502944946, 'gamma': 0.32073795276195083, 'tao': 5.903074502944946, 'b': 0.696316123008728, 'lambda_': 0.01, 'std_coefficient': 1.0, 'train_test_split': 6000}
+[2018-10-15 12:05:35,386] Trainset size: 2000
+[2018-10-15 12:05:35,386] Testset size: 0
+[2018-10-15 12:05:36,983] DenseNet Channels: 174
+[2018-10-15 12:05:37,107] Loading model from file 'fashion-mnist/model.pkl' failed.
+[2018-10-15 12:05:37,108] Load prototypes from file 'fashion-mnist/prototypes.pkl'.
+[2018-10-15 12:09:31,256] ********************************************************************************
+[2018-10-15 12:09:31,257] {'dataset_path': 'data/fashion-mnist_sample_2000.csv', 'loss_type': 'pdce', 'tensor_view': [-1, 28, 28], 'in_channels': 1, 'number_layers': 8, 'growth_rate': 12, 'learning_rate': 0.001, 'threshold': 5.903074502944946, 'gamma': 0.32073795276195083, 'tao': 5.903074502944946, 'b': 0.696316123008728, 'lambda_': 0.01, 'std_coefficient': 1.0, 'train_test_split': 6000}
+[2018-10-15 12:09:31,257] Trainset size: 2000
+[2018-10-15 12:09:31,257] Testset size: 0
+[2018-10-15 12:09:32,765] DenseNet Channels: 174
+[2018-10-15 12:09:32,860] Loading model from file 'fashion-mnist/model.pkl' failed.
+[2018-10-15 12:09:32,861] Load prototypes from file 'fashion-mnist/prototypes.pkl'.
+[2018-10-15 12:12:51,696] ********************************************************************************
+[2018-10-15 12:12:51,697] {'dataset_path': 'data/fashion-mnist_sample_2000.csv', 'loss_type': 'pdce', 'tensor_view': [-1, 28, 28], 'in_channels': 1, 'number_layers': 8, 'growth_rate': 12, 'learning_rate': 0.001, 'threshold': 5.903074502944946, 'gamma': 0.32073795276195083, 'tao': 5.903074502944946, 'b': 0.696316123008728, 'lambda_': 0.01, 'std_coefficient': 1.0, 'train_test_split': 6000}
+[2018-10-15 12:12:51,697] Trainset size: 2000
+[2018-10-15 12:12:51,697] Testset size: 0
+[2018-10-15 12:12:53,323] DenseNet Channels: 174
+[2018-10-15 12:12:53,449] Loading model from file 'fashion-mnist/model.pkl' failed.
+[2018-10-15 12:12:53,451] Load prototypes from file 'fashion-mnist/prototypes.pkl'.
+[2018-10-15 12:14:08,449] ---------- 77.919s ----------
+[2018-10-15 12:18:23,472] ********************************************************************************
+[2018-10-15 12:18:23,475] {'dataset_path': 'data/fashion-mnist_sample_2000.csv', 'loss_type': 'pdce', 'tensor_view': [-1, 28, 28], 'in_channels': 1, 'number_layers': 8, 'growth_rate': 12, 'learning_rate': 0.0005, 'threshold': 5.903074502944946, 'gamma': 0.32073795276195083, 'tao': 5.903074502944946, 'b': 0.696316123008728, 'lambda_': 0.01, 'std_coefficient': 1.0, 'train_test_split': 6000}
+[2018-10-15 12:18:23,476] Trainset size: 2000
+[2018-10-15 12:18:23,477] Testset size: 0
+[2018-10-15 12:18:40,904] DenseNet Channels: 174
+[2018-10-15 12:18:40,961] Loading model from file 'fashion-mnist/model.pkl' failed.
+[2018-10-15 12:18:40,964] Load prototypes from file 'fashion-mnist/prototypes.pkl'.
+[2018-10-15 12:25:31,944] ********************************************************************************
+[2018-10-15 12:25:31,946] {'dataset_path': 'data/fashion-mnist_sample_2000.csv', 'loss_type': 'pdce', 'tensor_view': [-1, 28, 28], 'in_channels': 1, 'number_layers': 8, 'growth_rate': 12, 'learning_rate': 0.0005, 'threshold': 5.903074502944946, 'gamma': 0.32073795276195083, 'tao': 5.903074502944946, 'b': 0.696316123008728, 'lambda_': 0.01, 'std_coefficient': 1.0, 'train_test_split': 6000}
+[2018-10-15 12:25:31,947] Trainset size: 2000
+[2018-10-15 12:25:31,948] Testset size: 0
+[2018-10-15 12:25:33,500] DenseNet Channels: 174
+[2018-10-15 12:25:33,557] Loading model from file 'fashion-mnist/model.pkl' failed.
+[2018-10-15 12:25:33,561] Load prototypes from file 'fashion-mnist/prototypes.pkl'.
+[2018-10-15 12:26:01,235] ********************************************************************************
+[2018-10-15 12:26:01,236] {'dataset_path': 'data/fashion-mnist_sample_2000.csv', 'loss_type': 'pdce', 'tensor_view': [-1, 28, 28], 'in_channels': 1, 'number_layers': 8, 'growth_rate': 12, 'learning_rate': 0.0005, 'threshold': 5.903074502944946, 'gamma': 0.32073795276195083, 'tao': 5.903074502944946, 'b': 0.696316123008728, 'lambda_': 0.01, 'std_coefficient': 1.0, 'train_test_split': 6000}
+[2018-10-15 12:26:01,238] Trainset size: 2000
+[2018-10-15 12:26:01,240] Testset size: 0
+[2018-10-15 12:26:02,822] DenseNet Channels: 174
+[2018-10-15 12:26:02,880] Loading model from file 'fashion-mnist/model.pkl' failed.
+[2018-10-15 12:26:02,883] Load prototypes from file 'fashion-mnist/prototypes.pkl'.
+[2018-10-15 12:29:36,428] ********************************************************************************
+[2018-10-15 12:29:36,430] {'dataset_path': 'data/fashion-mnist_sample_2000.csv', 'loss_type': 'pdce', 'tensor_view': [-1, 28, 28], 'in_channels': 1, 'number_layers': 8, 'growth_rate': 12, 'learning_rate': 0.0005, 'threshold': 5.903074502944946, 'gamma': 0.32073795276195083, 'tao': 5.903074502944946, 'b': 0.696316123008728, 'lambda_': 0.01, 'std_coefficient': 1.0, 'train_test_split': 6000}
+[2018-10-15 12:29:36,431] Trainset size: 2000
+[2018-10-15 12:29:36,432] Testset size: 0
+[2018-10-15 12:29:38,169] DenseNet Channels: 174
+[2018-10-15 12:29:38,232] Loading model from file 'fashion-mnist/model.pkl' failed.
+[2018-10-15 12:29:38,235] Load prototypes from file 'fashion-mnist/prototypes.pkl'.
+[2018-10-15 12:31:32,902] ********************************************************************************
+[2018-10-15 12:31:32,902] {'dataset_path': 'data/fashion-mnist_sample_2000.csv', 'loss_type': 'pdce', 'tensor_view': [-1, 28, 28], 'in_channels': 1, 'number_layers': 8, 'growth_rate': 12, 'learning_rate': 0.0005, 'threshold': 5.903074502944946, 'gamma': 0.32073795276195083, 'tao': 5.903074502944946, 'b': 0.696316123008728, 'lambda_': 0.01, 'std_coefficient': 1.0, 'train_test_split': 6000}
+[2018-10-15 12:31:32,903] Trainset size: 2000
+[2018-10-15 12:31:32,903] Testset size: 0
+[2018-10-15 12:31:34,282] DenseNet Channels: 174
+[2018-10-15 12:31:34,359] Loading model from file 'fashion-mnist/model.pkl' failed.
+[2018-10-15 12:31:34,361] Load prototypes from file 'fashion-mnist/prototypes.pkl'.
+[2018-10-15 12:34:33,940] ********************************************************************************
+[2018-10-15 12:34:33,943] {'dataset_path': 'data/fashion-mnist_sample_2000.csv', 'loss_type': 'pdce', 'tensor_view': [-1, 28, 28], 'in_channels': 1, 'number_layers': 8, 'growth_rate': 12, 'learning_rate': 0.0005, 'threshold': 5.903074502944946, 'gamma': 0.32073795276195083, 'tao': 5.903074502944946, 'b': 0.696316123008728, 'lambda_': 0.01, 'std_coefficient': 1.0, 'train_test_split': 6000}
+[2018-10-15 12:34:33,944] Trainset size: 2000
+[2018-10-15 12:34:33,945] Testset size: 0
+[2018-10-15 12:34:35,485] DenseNet Channels: 174
+[2018-10-15 12:34:35,543] Loading model from file 'fashion-mnist/model.pkl' failed.
+[2018-10-15 12:34:35,546] Load prototypes from file 'fashion-mnist/prototypes.pkl'.
+[2018-10-15 12:43:16,754] ********************************************************************************
+[2018-10-15 12:43:16,756] {'dataset_path': 'data/fashion-mnist_sample_2000.csv', 'loss_type': 'pdce', 'tensor_view': [-1, 28, 28], 'in_channels': 1, 'number_layers': 8, 'growth_rate': 12, 'learning_rate': 0.0005, 'threshold': 5.903074502944946, 'gamma': 0.32073795276195083, 'tao': 5.903074502944946, 'b': 0.696316123008728, 'lambda_': 0.01, 'std_coefficient': 1.0, 'train_test_split': 6000}
+[2018-10-15 12:43:16,758] Trainset size: 2000
+[2018-10-15 12:43:16,759] Testset size: 0
+[2018-10-15 12:43:18,319] DenseNet Channels: 174
+[2018-10-15 12:43:18,376] Loading model from file 'fashion-mnist/model.pkl' failed.
+[2018-10-15 12:43:18,379] Load prototypes from file 'fashion-mnist/prototypes.pkl'.
+[2018-10-15 12:52:46,022] ********************************************************************************
+[2018-10-15 12:52:46,024] {'dataset_path': 'data/fashion-mnist_sample_2000.csv', 'loss_type': 'pdce', 'tensor_view': [-1, 28, 28], 'in_channels': 1, 'number_layers': 8, 'growth_rate': 12, 'learning_rate': 0.0005, 'threshold': 5.903074502944946, 'gamma': 0.32073795276195083, 'tao': 5.903074502944946, 'b': 0.696316123008728, 'lambda_': 0.01, 'std_coefficient': 1.0, 'train_test_split': 6000}
+[2018-10-15 12:52:46,025] Trainset size: 2000
+[2018-10-15 12:52:46,026] Testset size: 0
+[2018-10-15 12:52:47,576] DenseNet Channels: 174
+[2018-10-15 12:52:47,633] Loading model from file 'fashion-mnist/model.pkl' failed.
+[2018-10-15 12:52:47,636] Load prototypes from file 'fashion-mnist/prototypes.pkl'.
+[2018-10-15 12:56:50,298] ********************************************************************************
+[2018-10-15 12:56:50,299] {'dataset_path': 'data/fashion-mnist_sample_2000.csv', 'loss_type': 'pdce', 'tensor_view': [-1, 28, 28], 'in_channels': 1, 'number_layers': 8, 'growth_rate': 12, 'learning_rate': 0.0005, 'threshold': 5.903074502944946, 'gamma': 0.32073795276195083, 'tao': 5.903074502944946, 'b': 0.696316123008728, 'lambda_': 0.01, 'std_coefficient': 1.0, 'train_test_split': 6000}
+[2018-10-15 12:56:50,301] Trainset size: 2000
+[2018-10-15 12:56:50,302] Testset size: 0
+[2018-10-15 12:56:51,891] DenseNet Channels: 174
+[2018-10-15 12:56:51,945] Loading model from file 'fashion-mnist/model.pkl' failed.
+[2018-10-15 12:56:51,947] Load prototypes from file 'fashion-mnist/prototypes.pkl'.
+[2018-10-15 12:59:23,293] ********************************************************************************
+[2018-10-15 12:59:23,295] {'dataset_path': 'data/fashion-mnist_sample_2000.csv', 'loss_type': 'pdce', 'tensor_view': [-1, 28, 28], 'in_channels': 1, 'number_layers': 8, 'growth_rate': 12, 'learning_rate': 0.0005, 'threshold': 5.903074502944946, 'gamma': 0.32073795276195083, 'tao': 5.903074502944946, 'b': 0.696316123008728, 'lambda_': 0.01, 'std_coefficient': 1.0, 'train_test_split': 6000}
+[2018-10-15 12:59:23,296] Trainset size: 2000
+[2018-10-15 12:59:23,297] Testset size: 0
+[2018-10-15 12:59:24,857] DenseNet Channels: 174
+[2018-10-15 12:59:24,915] Loading model from file 'fashion-mnist/model.pkl' failed.
+[2018-10-15 12:59:24,918] Load prototypes from file 'fashion-mnist/prototypes.pkl'.
+[2018-10-15 13:03:31,373] ********************************************************************************
+[2018-10-15 13:03:31,374] {'dataset_path': 'data/fashion-mnist_sample_2000.csv', 'loss_type': 'pdce', 'tensor_view': [-1, 28, 28], 'in_channels': 1, 'number_layers': 8, 'growth_rate': 12, 'learning_rate': 0.0005, 'threshold': 5.903074502944946, 'gamma': 0.32073795276195083, 'tao': 5.903074502944946, 'b': 0.696316123008728, 'lambda_': 0.01, 'std_coefficient': 1.0, 'train_test_split': 6000}
+[2018-10-15 13:03:31,374] Trainset size: 2000
+[2018-10-15 13:03:31,375] Testset size: 0
+[2018-10-15 13:03:32,750] DenseNet Channels: 174
+[2018-10-15 13:03:32,832] Loading model from file 'fashion-mnist/model.pkl' failed.
+[2018-10-15 13:03:32,834] Load prototypes from file 'fashion-mnist/prototypes.pkl'.
+[2018-10-15 13:58:00,397] ********************************************************************************
+[2018-10-15 13:58:00,398] {'dataset_path': 'data/fashion-mnist_sample_2000.csv', 'loss_type': 'pdce', 'tensor_view': [-1, 28, 28], 'in_channels': 1, 'number_layers': 8, 'growth_rate': 12, 'learning_rate': 0.0005, 'threshold': 5.903074502944946, 'gamma': 0.32073795276195083, 'tao': 5.903074502944946, 'b': 0.696316123008728, 'lambda_': 0.01, 'std_coefficient': 1.0, 'train_test_split': 6000}
+[2018-10-15 13:58:00,398] Trainset size: 2000
+[2018-10-15 13:58:00,398] Testset size: 0
+[2018-10-15 13:58:01,749] DenseNet Channels: 174
+[2018-10-15 13:58:01,830] Loading model from file 'fashion-mnist/model.pkl' failed.
+[2018-10-15 13:58:01,832] Load prototypes from file 'fashion-mnist/prototypes.pkl'.
+[2018-10-15 14:02:06,358] ********************************************************************************
+[2018-10-15 14:02:06,359] {'dataset_path': 'data/fashion-mnist_sample_2000.csv', 'loss_type': 'pdce', 'tensor_view': [-1, 28, 28], 'in_channels': 1, 'number_layers': 8, 'growth_rate': 12, 'learning_rate': 0.0005, 'threshold': 5.903074502944946, 'gamma': 0.32073795276195083, 'tao': 5.903074502944946, 'b': 0.696316123008728, 'lambda_': 0.01, 'std_coefficient': 1.0, 'train_test_split': 6000}
+[2018-10-15 14:02:06,359] Trainset size: 2000
+[2018-10-15 14:02:06,359] Testset size: 0
+[2018-10-15 14:02:07,721] DenseNet Channels: 174
+[2018-10-15 14:02:07,805] Loading model from file 'fashion-mnist/model.pkl' failed.
+[2018-10-15 14:02:07,807] Load prototypes from file 'fashion-mnist/prototypes.pkl'.
+[2018-10-15 14:03:39,250] ********************************************************************************
+[2018-10-15 14:03:39,250] {'dataset_path': 'data/fashion-mnist_sample_2000.csv', 'loss_type': 'pdce', 'tensor_view': [-1, 28, 28], 'in_channels': 1, 'number_layers': 8, 'growth_rate': 12, 'learning_rate': 0.0005, 'threshold': 5.903074502944946, 'gamma': 0.32073795276195083, 'tao': 5.903074502944946, 'b': 0.696316123008728, 'lambda_': 0.01, 'std_coefficient': 1.0, 'train_test_split': 6000}
+[2018-10-15 14:03:39,250] Trainset size: 2000
+[2018-10-15 14:03:39,250] Testset size: 0
+[2018-10-15 14:03:40,604] DenseNet Channels: 174
+[2018-10-15 14:03:40,655] Loading model from file 'fashion-mnist/model.pkl' failed.
+[2018-10-15 14:03:40,656] Load prototypes from file 'fashion-mnist/prototypes.pkl'.
+[2018-10-15 14:04:56,503] ---------- 77.623s ----------
+[2018-10-15 14:07:13,186] Loading model from file 'fashion-mnist/model.pkl' failed.
+[2018-10-15 14:07:29,112] Load prototypes from file 'fashion-mnist/prototypes.pkl'.

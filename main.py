@@ -488,13 +488,14 @@ def visualization(config, trainset):
         except RuntimeError:
             logger.error("Loading prototypes from file '%s' failed.", config.prototypes_path)
 
+    # original_features = []
     features = []
     labels = []
 
     for i, (feature, label) in enumerate(trainloader):
         feature, label = net(feature.to(net.device)).view(-1), label.item()
 
-        features.append(feature.cpu().detach().numpy())
+        features.append(feature.data.cpu().numpy())
         labels.append(label)
 
     features = np.array(features)
@@ -502,9 +503,13 @@ def visualization(config, trainset):
 
     feature_tsne = TSNE(n_components=2, random_state=30)
     features = feature_tsne.fit_transform(features, labels)
+    # original_features = feature_tsne.fit_transform(original_features, labels)
 
     plt.figure(figsize=(6, 4))
-    plt.scatter(features[:, 0], features[:, 1], c=labels, label="Our Method")
+    colors = 'r', 'g', 'b', 'c', 'm', 'y', 'k', 'gray', 'orange', 'purple'
+    for c, label in zip(colors, sorted(list(trainset.label_set))):
+        # print(c, label)
+        plt.scatter(features[labels == label, 0], features[labels == label, 1], c=c, label=label)
     plt.legend()
     plt.show()
 
